@@ -276,6 +276,32 @@ zmlocalconfig -e ldap_common_require_tls=0
 zmcontrol restart
 ```
 
+Enable Logs:
+```
+/opt/zimbra/libexec/zmsyslogsetup
+
+
+    Uncomment the following lines in /etc/rsyslog.conf
+
+    $modload imudp
+    $UDPServerRun 514
+
+    Restart rsyslog
+
+For rsyslog on RHEL or CentOS:
+
+    Uncomment the following lines in /etc/rsyslog.conf.
+
+    # Provides UDP syslog reception
+    #$ModLoad imudp
+    #$UDPServerRun 514
+
+    # Provides TCP syslog reception
+    #$ModLoad imtcp
+    #$InputTCPServerRun 514
+```
+
+
 16) OPTIONAL: configure OpenDKIM service:
 
 Open a root console in Zimbra server and put the following commands:
