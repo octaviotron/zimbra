@@ -250,7 +250,13 @@ Configuration complete - press return to exit
 
 init 6
 
+## important
 
+On all zimbra servers do:
+
+```
+zmupdateauthkeys
+```
 
 16) OPTIONAL: configure OpenDKIM service:
 
