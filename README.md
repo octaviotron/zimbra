@@ -131,9 +131,9 @@ After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to
 
 13) Set Domain in LDAP:
 
-If you skip this step, your domain name will be "mail.domain.tld" so mailboxes will have addresses like "user@mail.domain.tld" and you may preffer to have "user@domain.tld" mail accouns, so change the default config.
+If you skip this step, your domain name will be "mail.domain.tld" so mailboxes will have addresses like "user@mail.domain.tld" and you may preffer to have "user@domain.tld" mail accounts, so change the default config.
 
-Go to option 2 () and then option 3 () and change default domain to "domain.tld"
+Go to option 2 "zimbra-ldap" and then option 3 "Domain to create" and change default domain to "domain.tld"
 
 14) Install Zimbra server:
 
