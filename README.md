@@ -95,9 +95,9 @@ firewall-cmd --reload
 
 ```
 mkdir zimbra && cd zimbra
-wget https://files.zimbra.com/downloads/8.8.12_GA/zcs-8.8.12_GA_3794.RHEL7_64.20190329045002.tgz --no-check-certificate
-tar zxpvf zcs-8.8.12_GA_3794.RHEL7_64.20190329045002.tgz
-cd zcs-8.8.12_GA_3794.RHEL7_64.20190329045002
+wget https://files.zimbra.com/downloads/8.8.15_GA/zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
 ./install.sh
 ```
 
