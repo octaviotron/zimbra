@@ -212,6 +212,14 @@ Remember to change "cn=accounts,dc=domain,dc=tld" and "ldap://192.168.0.100:389"
 
 Thats is ! you have configured a Zimbra Server with external LDAP accounts
 
+DIsable TLS:
+```
+zmlocalconfig -e ssl_allow_untrusted_certs=true 
+zmlocalconfig -e ldap_starttls_supported=0
+zmlocalconfig -e ldap_starttls_required=false
+zmlocalconfig -e ldap_common_require_tls=0
+zmcontrol restart
+```
 ## Install Zimbra Proxy Server
 
 Repeat common process steps, but in ./install.sh choose only to install memcached and proxy components: 
@@ -255,7 +263,17 @@ init 6
 On all zimbra servers do:
 
 ```
+zmsshkeygen
 zmupdateauthkeys
+```
+
+Disable TLS:
+```
+zmlocalconfig -e ssl_allow_untrusted_certs=true 
+zmlocalconfig -e ldap_starttls_supported=0
+zmlocalconfig -e ldap_starttls_required=false
+zmlocalconfig -e ldap_common_require_tls=0
+zmcontrol restart
 ```
 
 16) OPTIONAL: configure OpenDKIM service:
