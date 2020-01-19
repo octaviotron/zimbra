@@ -260,6 +260,12 @@ init 6
 
 ## important
 
+Init at boot:
+
+```
+update-rc.d zimbra defaults
+```
+
 On all zimbra servers do:
 
 ```
