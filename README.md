@@ -372,10 +372,11 @@ Zimbra Desktop: https://wiki.zimbra.com/wiki/Installing_Zimbra_Desktop_on_64bit_
 
 PROXY:	https://wiki.zimbra.com/wiki/Zimbra_Proxy_Guide
 
-
+SYSTEMD: https://github.com/Zimbra-Community/zimbra-tools/blob/master/zimbra.service
 
 # Notes
 
 zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
+
 zmlocalconfig -s zimbra_ldap_password ldap_master_url
 
