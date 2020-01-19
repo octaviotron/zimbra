@@ -286,6 +286,7 @@ Enable Logs:
 ```
 /opt/zimbra/libexec/zmsyslogsetup
 
+/etc/sysconfig/rsyslog: "-r" 
 
     Uncomment the following lines in /etc/rsyslog.conf
 
