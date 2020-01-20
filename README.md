@@ -379,7 +379,8 @@ LOGS: https://wiki.zimbra.com/wiki/Using_log4j_to_Configure_mailboxd_Logging
 
 # Notes
 
-zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
+- zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
+- Get LDAP password: zmlocalconfig -s zimbra_ldap_password ldap_master_url
+- Show config parameter: zmprov gcf [parameter]
 
-zmlocalconfig -s zimbra_ldap_password ldap_master_url
 
