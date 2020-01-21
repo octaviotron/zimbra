@@ -91,3 +91,4 @@ zmmailboxdctl restart
 zmprov fc all
 zmmailboxdctl restart
 
+https://wiki.zimbra.com/wiki/Using_zmstat-chart_to_generate_statistics
