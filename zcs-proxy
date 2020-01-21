@@ -81,3 +81,12 @@ su - zimbra
 zmcontrol restart
 
 
+############## CHAT ##############
+
+zmzimletctl disable com_zextras_chat_open
+zmzimletctl undeploy com_zextras_chat_open
+zmmailboxdctl restart
+# yum install zimbra-chat
+zmprov fc all
+zmmailboxdctl restart
+
