@@ -22,8 +22,14 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 
+MASTER:
+ zmlocalconfig -s zimbra_ldap_password ldap_master_url
 
+1: 2) Ldap master host 4) Ldap Admin password
 
+2: 12) Bind password for nginx ldap user 
+
+*** CONFIGURATION COMPLETE - press 'a' to apply Select from menu, or press 'a' to apply config (? - help) a Save configuration data to a file? [Yes] Save config in file: [/opt/zimbra/config.15941] Saving config in /opt/zimbra/config.15941...done. The system will be modified - continue? [No] Yes Notify Zimbra of your installation? [Yes]
 1: 2) Ldap master host 4) Ldap Admin password
 
 2: 12) Bind passwor
