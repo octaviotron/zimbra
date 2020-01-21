@@ -1,0 +1,56 @@
+Proxmox VMS:
+
+cd /etc/pve/qemu-server
+qm set 100 -ide1 /dev/sdc1
+
+
+/usr/lib/ocf/resource.d/heartbeat/zimbractl
+start)
+        echo "Starting Zimbra Services"
+        echo "0" > /var/log/db-svc-started.log
+        rm -f /var/log/zimbra-svc-stopped.log
+        mount /dev/sdb /opt/zimbra
+        if [ -f /etc/init.d/zimbra ]
+        then
+                /etc/init.d/zimbra start
+        fi
+        ocf_log info "Zimbra started."
+        exit $OCF_SUCCESS
+        ;;
+stop)
+        echo "Stopping Zimbra Services"
+        rm -f /var/log/db-svc-started.log
+        echo "0" > /var/log/zimbra-svc-stopped.log
+        if [ -f /etc/init.d/zimbra ]
+        then
+                /etc/init.d/zimbra stop
+                /bin/killall -9 -u zimbra
+        fi
+        umount /opt/zimbra
+        ocf_log info "Zimbra stopped."
+        exit $OCF_SUCCESS
+        ;;
+
+
+
+Nodo 1:
+mount /opt/zimbra
+./install.sh -s 
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+/opt/zimbra/libexec/zmsetup.pl
+scp config.log nodo2
+
+Nodo2:
+./install.sh -s 
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+/opt/zimbra/libexec/zmsetup.pl -c [CONFIG.LOG]
+stop zimbra
+mv /opt/zimbra /bk
+mkdir /opt/zimbra
+
+
+
