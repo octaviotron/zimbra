@@ -58,3 +58,5 @@ To reset the administrative password:
    su - zimbra
    zmprov sp <admin email address> <new password>
 
+Show config:
+zmprov gcf zimbraMailTrustedIP
