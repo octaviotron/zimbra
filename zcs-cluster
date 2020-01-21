@@ -53,4 +53,8 @@ mv /opt/zimbra /bk
 mkdir /opt/zimbra
 
 
+To reset the administrative password:
+
+   su - zimbra
+   zmprov sp <admin email address> <new password>
 
