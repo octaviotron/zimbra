@@ -1,6 +1,6 @@
 Install Zimbra Proxy Server
 
-Repeat common process steps, but in ./install.sh choose only to install memcached and proxy components:
+./install -s
 
 Do you agree with the terms of the software license agreement? [N] Y
 Use Zimbra's package repository [Y]
@@ -15,6 +15,14 @@ Install zimbra-spell [Y] N
 Install zimbra-memcached [Y] N
 **Install** **zimbra-proxy** **[Y]** **Y**
 The system will be modified.  Continue? [N] Y
+
+
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+/opt/zimbra/libexec/zmsetup.pl
+
+
 
 1: 2) Ldap master host 4) Ldap Admin password
 
