@@ -163,8 +163,8 @@ pcs status corosync
 
 Verify the config state and disable stonith:
 ```
-crm_verify -L -V
 pcs property set stonith-enabled=false
+crm_verify -L -V
 ```
 
 And disable the quorum policy, as there are only two nodes:
