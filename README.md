@@ -28,16 +28,25 @@ This are the needed steps for installing all zimbra nodes (both mailbox and prox
 1) First, install Centos 7 with support for English and your native language (if any) and update all your systems: 
 
 ```
+rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 yum -y update
+
 ```
 
-2) It is important to set an FQDN hostname:
+2) Install all needed packages:
+
+```
+yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
+```
+
+3) It is important to set an FQDN hostname:
 
 ```
 hostnamectl set-hostname "mail.domain.tld" && exec bash
 ```
 
-3) Next, put the propper hostname and ip in /etc/hosts
+4) Next, put the propper hostname and ip in /etc/hosts
 
 ```
 192.168.0.1     mail.domain.tld     mail
@@ -59,7 +68,6 @@ SELINUX=permissive
 6) OPTIONAL: If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
 
 ```
-yum -y install ipa-client
 ipa-client-install --enable-dns-updates
 ```
 
@@ -76,12 +84,6 @@ To verify MX record, ask the DNS:
 
 ```
 dig @freeipa.domain.tld domain.tld mx
-```
-
-8) Install system dependencies:
-
-```
-yum install unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget -y
 ```
 
 9) Disable postfix: 
@@ -114,7 +116,121 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
-10) Download and Install the Software:
+
+## Installing CLUSTER Software
+
+On both zimbra01 (active server) and zimbra02 (passive server) install cluster packages:
+
+```
+yum -y install pacemaker pcs corosync resource-agents pacemaker-cli
+```
+
+Set the "hacluster" account password in both servers:
+
+```
+echo "hacluster:your_password"|chpasswd
+```
+
+(change "your_password" and put there your password)
+
+On both zimbra01 (active server) and zimbra02 (passive server) start cluster:
+```
+systemctl start pcsd
+systemctl status pcsd
+```
+
+On both zimbra01 (active server) and zimbra02 (passive server) authorize nodes:
+```
+pcs cluster auth zimbra01 zimbra02
+```
+
+The following steps must be done only in the MASTER (active) node (zimbra01.domain.tld)
+
+Create the cluster:
+
+```
+pcs cluster setup --name cluster_zimbra zimbra01 zimbra02
+pcs cluster start --all
+```
+
+Check cluster status:
+
+```
+pcs status cluster
+corosync-cmapctl | grep members
+pcs status corosync
+```
+
+Verify the config state and disable stonith:
+```
+crm_verify -L -V
+pcs property set stonith-enabled=false
+```
+
+And disable the quorum policy, as there are only two nodes:
+
+```
+pcs property set no-quorum-policy=ignore
+pcs property
+```
+
+Now, create the VIRTUAL IP resource:
+```
+pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.254 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
+```
+
+We are using "eth0" here to create "eth0:0" alias. Please verify your network interface is this or rename as needed.
+
+Verify the creation of the virtual IP:
+```
+pcs status resources
+```
+
+You will get a message with a line like this:
+```
+virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
+```
+
+On both zimbra01 (active server) and zimbra02 (passive server) enable services:
+
+```
+systemctl enable pcsd
+systemctl enable corosync
+systemctl enable pacemaker
+```
+Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
+
+On both zimbra01 (active server) and zimbra02 (passive server) modify /usr/lib/systemd/system/corosync.service file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow:
+
+```
+[Service]
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=/usr/share/corosync/corosync start
+ExecStop=/usr/share/corosync/corosync stop
+Type=forking
+```
+
+On both zimbra01 (active server) and zimbra02 (passive server) reload daemons after save this file:
+
+```
+systemctl daemon-reload
+```
+
+## Installing MASTER (ACTIVE) ZIMBRA
+
+At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
+
+If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do (on hypervisor host):
+
+```
+cd /etc/pve/qemu-server/
+qm set 101 -ide1 /dev/md0
+```
+
+This will add /dev/md0 to 101 VM id
+
+
+1) Download and Install the Software:
 
 ```
 mkdir /root/zimbra && cd /root/zimbra
@@ -126,20 +242,10 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 Note "-s" option: it will install the software without configure it. We will make it later.
 
 
-## Installing MASTER Zimbra Server 
 
-At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
+1) Install 
 
-If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do:
-
-```
-cd /etc/pve/qemu-server/
-qm set 101 -ide1 /dev/md0
-```
-
-This will add /dev/md0 to 101 VM id
-
-11) The instaler will ask you several questions, choose the following options:
+1) The instaler will ask you several questions, choose the following options:
 
 ```
   Do you agree with the terms of the software license agreement? [N] y
