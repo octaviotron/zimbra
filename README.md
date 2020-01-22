@@ -8,11 +8,17 @@ Theese are the hostnames and IPs we will use:
 ```
 freeipa.domain.tld	192.168.0.1 	(LDAP service)
 mail.domain.tld 	192.168.0.2	(Zimbra Server)
-proxy1.domain.tld 	192.168.0.3	(first proxy server)
-proxy2.domain.tld 	192.168.0.4	(second proxy server)
+proxy1.domain.tld 	192.168.0.3	(first zimbra-proxy server)
+proxy2.domain.tld 	192.168.0.4	(second zimbra-proxy server)
 ```
 
-## Common Process
+Requirements:
+
+- 3 servers (may be virtual) with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
+- SAN/NAS storage for mailboxes in cluster servers
+
+
+## Common Process (for all servers)
 
 This are the needed steps for installing all zimbra nodes (both mailbox and proxies):
 
