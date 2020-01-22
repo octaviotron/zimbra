@@ -114,19 +114,33 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
-## Installing Zimbra Server 
-
-10) Download Zimbra and run installer:
+10) Download and Install the Software:
 
 ```
-mkdir zimbra && cd zimbra
+mkdir /root/zimbra && cd /root/zimbra
 wget https://files.zimbra.com/downloads/8.8.15_GA/zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
 tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
-cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
-./install.sh
+cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
+./install.sh -s
+```
+Note "-s" option: it will install the software without configure it. We will make it later.
+
+
+## Installing MASTER Zimbra Server 
+
+At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
+
+If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do:
+
+```
+cd /etc/pve/qemu-server/
+qm set 101 -ide1 /dev/md0
 ```
 
-11) This will ask you several questions, press ENTER on [Y] marked options:
+This will add /dev/md0 to 101 VM id
+
+11) The instaler will ask you several questions, choose the following options:
+
 ```
   Do you agree with the terms of the software license agreement? [N] y
   Use Zimbra's package repository [Y]
@@ -138,27 +152,53 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
   Install zimbra-store [Y] 
   Install zimbra-apache [Y] 
   Install zimbra-spell [Y] 
-  *Install zimbra-memcached [Y] 
-  *Install zimbra-proxy [Y] 
+  Install zimbra-memcached [Y] 
+  Install zimbra-proxy [Y] 
   Install zimbra-drive [Y] 
-  Install zimbra-imapd (BETA - for evaluation only) [N] 
-  Install zimbra-chat [Y] 
+  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
+  Install zimbra-chat [Y] N  <----- choose N
   The system will be modified.  Continue? [N] Y
 ```
 
-Zimbra will download updates and pathces, wait for a while until you get again a prompt.
+Note the "N" option in both zimbra-imapd and zimbra-chat. The impad component is BETA and is not recommemded for production environments, and Zimbra Chat provided with 8.8.15 installer provides a buggy zimlet: we will install a fixed one later.
+
+Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
+
+12) Fix CA paths:
+
+```
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+```
+
+Then run the installer configuration:
+
+```
+/opt/zimbra/libexec/zmsetup.pl
+```
+
+You may get an error message like this, informing your about resolving MX record, so you will need to change it an give the right domain name. Rememeber MX record points to mail.domain.tld and not zimbra01.domain.tld:
+
+```
+DNS ERROR resolving MX for zimbra01.domain.tld
+It is suggested that the domain name have an MX record configured in DNS
+Change domain name? [Yes] <---- press ENTER
+Create domain: [zimbra01.domain.tld] domain.tld <----- your MX host here
+```
+
 
 12) Set Zimbra Admin Password:
 
-When prompt shows text "Address unconfigured (++) items (? - help)" press 7 and ENTER, then 4 and ENTER to set Admin password
+When prompt shows text **"Address unconfigured (++) items (? - help)"** press 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
 
 After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
 
 13) Set Domain in LDAP:
 
-If you skip this step, your domain name will be "mail.domain.tld" so mailboxes will have addresses like "user@mail.domain.tld" and you may preffer to have "user@domain.tld" mail accounts, so change the default config.
+If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
 
-Go to option 2 "zimbra-ldap" and then option 3 "Domain to create" and change default domain to "domain.tld"
+Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and change default domain to "domain.tld"
 
 14) Install Zimbra server:
 
