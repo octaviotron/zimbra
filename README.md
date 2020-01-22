@@ -1,8 +1,8 @@
-# zimbra
+# Proxied Zimbra Cluster
 
-**Zimbra 8.8 (ZCS) with multiple Proxy Servers, with external LDAP (FreeIPA) accounts provisioning**
+**Zimbra 8.8 (ZCS) in active-passive cluster, with multiple Proxy Servers and external LDAP (FreeIPA) accounts provisioning**
 
-This documentation is intended to have a full guide of how to install one server with Zimbra 8.8 (ZCS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case).
+This documentation is intended to have a full guide of how to install one server with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case).
 
 Theese are the hostnames and IPs we will use:
 ```
