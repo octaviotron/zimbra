@@ -65,7 +65,7 @@ ipa dnsrecord-add domain.tld @ --mx-rec="0 mail.domain.tld."
 
 To verify MX record, ask the DNS: 
 ```
-dig -t MX  domain.tld
+dig @freeipa.domain.tld domain.tld mx
 ```
 
 8) Install system dependencies:
