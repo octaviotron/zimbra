@@ -216,6 +216,205 @@ On both zimbra01 (active server) and zimbra02 (passive server) reload daemons af
 systemctl daemon-reload
 ```
 
+```
+vi /usr/lib/ocf/resource.d/heartbeat/zimbractl
+```
+
+```bash
+#!/bin/sh
+#
+# Resource script for Zimbra
+#
+# Description:  Manages Zimbra as an OCF resource in
+#               an high-availability setup.
+#
+# Author:       RRMP <tigerlinux@gmail.com>
+# License:      GNU General Public License (GPL)
+#
+#
+#       usage: $0 {start|stop|reload|monitor|validate-all|meta-data}
+#
+#       The "start" arg starts a Zimbra instance
+#
+#       The "stop" arg stops it.
+#
+# OCF parameters:
+#  OCF_RESKEY_binary
+#  OCF_RESKEY_config_dir
+#  OCF_RESKEY_parameters
+#
+##########################################################################
+
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+: ${OCF_RESKEY_binary="zmcontrol"}
+: ${OCF_RESKEY_zimbra_dir="/opt/zimbra"}
+: ${OCF_RESKEY_zimbra_user="zimbra"}
+: ${OCF_RESKEY_zimbra_group="zimbra"}
+USAGE="Usage: $0 {start|stop|reload|status|monitor|validate-all|meta-data}";
+
+##########################################################################
+
+usage() {
+	echo $USAGE >&2
+}
+
+meta_data() {
+	cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="postfix">
+<version>0.1</version>
+<longdesc lang="en">
+This script manages Zimbra as an OCF resource in a high-availability setup.
+</longdesc>
+<shortdesc lang="en">Manages a highly available Zimbra mail server instance</shortdesc>
+
+<parameters>
+
+<parameter name="binary" unique="0" required="0">
+<longdesc lang="en">
+Short name to the Zimbra control script.
+For example, "zmcontrol" of "/etc/init.d/zimbra".
+</longdesc>
+<shortdesc lang="en">
+Short name to the Zimbra control script</shortdesc>
+<content type="string" default="zmcontrol" />
+</parameter>
+
+<parameter name="zimbra_dir" unique="1" required="0">
+<longdesc lang="en">
+Full path to Zimbra directory.
+For example, "/opt/zimbra".
+</longdesc>
+<shortdesc lang="en">
+Full path to Zimbra directory</shortdesc>
+<content type="string" default="/opt/zimbra" />
+</parameter>
+
+<parameter name="zimbra_user" unique="1" required="0">
+<longdesc lang="en">
+Zimbra username.
+For example, "zimbra".
+</longdesc>
+<shortdesc lang="en">Zimbra username</shortdesc>
+<content type="string" default="zimbra" />
+</parameter>
+
+<parameter name="zimbra_group"
+ unique="1" required="0">
+<longdesc lang="en">
+Zimbra group.
+For example, "zimbra".
+</longdesc>
+<shortdesc lang="en">Zimbra group</shortdesc>
+<content type="string" default="zimbra" />
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start"   timeout="360s" />
+<action name="stop"    timeout="360s" />
+<action name="reload"  timeout="360s" />
+<action name="monitor" depth="0"  timeout="40s"
+ interval="60s" />
+<action name="validate-all"  timeout="360s" />
+<action name="meta-data"  timeout="5s" />
+</actions>
+</resource-agent>
+END
+}
+
+case $1 in
+meta-data)
+	meta_data
+	exit $OCF_SUCCESS
+	;;
+
+usage|help)
+	usage
+	exit $OCF_SUCCESS
+	;;
+start)
+	echo "Starting Zimbra Services"
+	echo "0" > /var/log/db-svc-started.log
+	rm -f /var/log/zimbra-svc-stopped.log
+	if [ -f /etc/init.d/zimbra ]
+	then
+		/etc/init.d/zimbra start
+	fi
+	ocf_log info "Zimbra started."
+	exit $OCF_SUCCESS
+	;;
+stop)
+	echo "Stopping Zimbra Services"
+	rm -f /var/log/db-svc-started.log
+	echo "0" > /var/log/zimbra-svc-stopped.log
+	if [ -f /etc/init.d/zimbra ]
+	then
+		/etc/init.d/zimbra stop
+		/bin/killall -9 -u zimbra
+	fi
+	ocf_log info "Zimbra stopped."
+	exit $OCF_SUCCESS
+	;;
+status|monitor)
+	echo "Zimbra Services Status"
+	if [ -f /var/log/zimbra-svc-started.log ]
+	then
+		exit $OCF_SUCCESS
+	else
+		exit $OCF_NOT_RUNNING
+	fi
+	;;
+restart|reload)
+	echo "Zimbra Services Restart"
+	ocf_log info "Reloading Zimbra."
+	if [ -f /etc/init.d/zimbra ]
+	then
+		/etc/init.d/zimbra stop
+		/bin/killall -9 -u zimbra
+		/etc/init.d/zimbra start
+	fi
+	exit $OCF_SUCCESS
+	;;
+validate-all)
+	echo "Validating Zimbra"
+	exit $OCF_SUCCESS
+	;;
+*)
+	usage
+	exit $OCF_ERR_UNIMPLEMENTED
+	;;
+esac
+```
+
+```
+scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@zimbra02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
+chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl (both)
+
+pcs resource create svczimbra ocf:heartbeat:zimbractl op monitor interval=30s
+pcs resource op remove svczimbra monitor
+pcs constraint colocation add svczimbra virtual_ip INFINITY
+pcs constraint order virtual_ip then svczimbra
+pcs status
+
+cd /
+pcs cluster cib add_fs
+pcs -f add_fs resource create zimbra_fs Filesystem device="/dev/md0" directory="/opt/zimbra" fstype="ext4"
+pcs -f add_fs constraint colocation add svczimbra zimbra_fs INFINITY
+pcs -f add_fs constraint order zimbra_fs then svczimbra
+pcs cluster cib-push add_fs
+```
+
+
+
+
+
 ## Installing MASTER (ACTIVE) ZIMBRA
 
 At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
