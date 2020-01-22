@@ -7,15 +7,18 @@ This documentation is intended to have a full guide of how to install one server
 Theese are the hostnames and IPs we will use:
 ```
 freeipa.domain.tld	192.168.0.1 	(LDAP service)
-mail.domain.tld 	192.168.0.2	(Zimbra Server)
-proxy1.domain.tld 	192.168.0.3	(first zimbra-proxy server)
-proxy2.domain.tld 	192.168.0.4	(second zimbra-proxy server)
+zimbra01.domain.tld 	192.168.0.2	(Zimbra Active Server)
+zimbra02.domain.tld	192.168.0.3	(Zimbra Passive Server)
+proxy1.domain.tld 	192.168.0.4	(first zimbra-proxy server)
+proxy2.domain.tld 	192.168.0.5	(second zimbra-proxy server)
 ```
 
-Requirements:
+Also, you will need a free IP address to assign virtual IP when configuring the cluster (192.168.0.254, for example)
+
+Harrdware Requirements for Zimbra Servers:
 
 - 3 servers (may be virtual) with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
-- SAN/NAS storage for mailboxes in cluster servers
+- SAN/NAS storage for mailboxes in cluster servers with about 1TB of free space (depending on your traffic)
 
 
 ## Common Process (for all servers)
@@ -110,6 +113,8 @@ Remember when you finnish all processes to enable it again:
 systemctl start firewalld
 systemctl enable firewalld
 ```
+
+## Installing Zimbra Server 
 
 10) Download Zimbra and run installer:
 
