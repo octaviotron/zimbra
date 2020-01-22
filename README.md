@@ -63,7 +63,8 @@ kinit admin
 ipa dnsrecord-add domain.tld @ --mx-rec="0 mail.domain.tld."
 ```
 
-To verify MX record, ask the DNS: 
+To verify MX record, ask the DNS:
+
 ```
 dig @freeipa.domain.tld domain.tld mx
 ```
@@ -89,7 +90,20 @@ systemctl disable postfix
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
 ```
-  
+
+It is possible you need some other ports, depending services you want to have in Zimbra Server. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this:
+
+```
+systemctl stop firewalld
+systemctl disable firewalld
+```
+
+Remember when you finnish all processes to enable it again:
+
+```
+systemctl start firewalld
+systemctl enable firewalld
+```
 
 10) Download Zimbra and run installer:
 
