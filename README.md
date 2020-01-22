@@ -492,7 +492,6 @@ Change domain name? [Yes] <---- press ENTER
 Create domain: [zimbra01.domain.tld] domain.tld <----- your MX host here
 ```
 
-
 12) Set Zimbra Admin Password:
 
 When prompt shows text **"Address unconfigured (++) items (? - help)"** press 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
@@ -503,7 +502,7 @@ After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to
 
 If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
 
-Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and change default domain to "domain.tld"
+Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and verify if it needed to change default domain to "domain.tld" (or if already configured, it depends on your DNS)
 
 14) Install Zimbra server:
 
@@ -516,31 +515,22 @@ When you have set it, return to main menu pressing ENTER in "Select, or 'r' for 
   The system will be modified - continue? [No] Yes
 ```
 
-Zimbra will start to install, go for a coffe, because it uses Java and all Java always delay a lot even in simple procecess. When completed, you will have this on prompt:
+Zimbra will start to install, go for another coffe, Java presents it:
 
 ```
   Notify Zimbra of your installation? [Yes]
   Configuration complete - press return to exit
 ```
 
-Now reboot the system:
+Now, copy the created config file to the other node:
 
-```
-  init 6
-```
+scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/
 
-16) Open a root shell account and start all zimbra services:
 
-```
-su - zimbra
-zmcontrol start
-```
+## Install the SECOND node
 
-Test if all services are running OK:
 
-```
-zmcontrol status
-```
+# Set LDAP Auto-Provission:
 
 17) Set FREE IPA LDAP Auto-Provision:
 
