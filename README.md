@@ -115,6 +115,21 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
+At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra** in both nodes, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
+
+If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do (on hypervisor host):
+
+```
+cd /etc/pve/qemu-server/
+qm set 101 -ide1 /dev/sdX <---- change sdX for the right one
+```
+
+This will add /dev/sdX to 101 VM id. of course you will need to mount it, into the VM do:
+
+```
+mount /dev/sdX /opt/zimbra
+```
+
 
 ## Installing CLUSTER Software
 
@@ -404,7 +419,7 @@ pcs status
 
 cd /
 pcs cluster cib add_fs
-pcs -f add_fs resource create zimbra_fs Filesystem device="/dev/md0" directory="/opt/zimbra" fstype="ext4"
+pcs -f add_fs resource create zimbra_fs Filesystem device="/dev/sdX" directory="/opt/zimbra" fstype="ext4"
 pcs -f add_fs constraint colocation add svczimbra zimbra_fs INFINITY
 pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
@@ -414,16 +429,6 @@ pcs cluster cib-push add_fs
 
 ## Installing first node (zimbra01.domain.tld)
 
-At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
-
-If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do (on hypervisor host):
-
-```
-cd /etc/pve/qemu-server/
-qm set 101 -ide1 /dev/md0
-```
-
-This will add /dev/md0 to 101 VM id
 
 It is needed to make temporary the address resolution of "**mail.domain.tld**" to point to this server, so change /etc/hosts line to:
 
@@ -431,6 +436,8 @@ It is needed to make temporary the address resolution of "**mail.domain.tld**" t
 ```
 192.168.0.254	mail.domain.tld mail 
 ```
+
+And remember having /opt/zimbra as a mountpoint to your NAS or SAN storage (or a local RAID connected to both nodes)
 
 Download and Install the Software:
 
