@@ -670,25 +670,24 @@ watch pcs status
 
 # Set LDAP Auto-Provission:
 
-17) Set FREE IPA LDAP Auto-Provision:
+This step is required to have all external LDAP accounts available in Zimbra MailBox. In this example we use a FreeIPA server, but any LDAP can do this job, as well you know some important configuration fields:
 
-This step is required to have all external LDAP accounts available in Zimbra MailBox:
+- The URL of the LDAP, in this example **ldap://freeipa.domain.tld:389**
+- The LDAP Search Base where accounts data can be found. In this example **cn=accounts,dc=domain,dc=tld**
+- The filter for finding the account. It is important to ensure the expresion filter to provide only one result. in this example **(uid=%u)**
 
- 17.1) Open https://mail.domain.tld:7071 to get into Zimbra Admin Interface.
- 17.2) Go to "Admin" > "Configuration" > "Domain"
- 17.3) Click in "domain.tld" in domain list.
- 17.4) Go to "Authentication" in the left menu
- 17.5) Click on the gear icon on the top right corner and select "Autentication"
- 17.6) Options:
-   17.6.1) Use external LDAP (click "next")
-   17.6.2) Put the LDAP (FreeIPA) hostname or IP
-   17.6.3) Put "(uid=%u)" into Filter Option (without quotation marks)
-   17.6.4) Put "cn=users,cn=accounts,dc=domain,dc=tld" on Base DN (change domain components to fit yours)
-   17.6.5) Click Next
-   17.6.6) Optionally put DN variables if you have configured it in your LDAP server
-   17.6.7) Test your LDAP connection using a user/password
-   17.6.8) Finnish the auth config dialog
- 17.7) Open a root shell in Zimbra server and write next commands:
+So, Open **https://mail.domain.tld:7071** to get into Zimbra Admin Interface. then go to **Admin > Configuration > Domain**, click in **domain.tld** in domain list. Go to **Authentication** in the left menu and click on the **gear icon** on the top right corner and select **Autentication**. Now follow the dialogs, giving the following answers:
+
+- **Use external LDAP** (click "next")
+- Put the LDAP (FreeIPA) hostname or IP: **freeipa.domain.tld**
+- Put **(uid=%u)** into Filter Option (remember it works in FreeIPA, modify it to fit your LDAP tree)
+- Put **cn=users,cn=accounts,dc=domain,dc=tld** on Base DN (idem: change domain components to fit yours)
+- **Next**
+- Optionally put DN variables if you have configured it in your LDAP server
+- Test your LDAP connection using a existing user/password account in your LDAP
+- **Finnish** the auth config dialog
+
+Now, open a root shell in Zimbra server and write next commands:
 
 ```
 su - zimbra
@@ -700,15 +699,15 @@ zmprov md prue.ba +zimbraAutoProvAttrMap sn=sn
 zmprov md prue.ba zimbraAutoProvAuthMech LDAP
 zmprov md prue.ba zimbraAutoProvLdapSearchBase "cn=accounts,dc=domain,dc=tld"
 zmprov md prue.ba zimbraAutoProvLdapSearchFilter "(uid=%u)"
-zmprov md prue.ba zimbraAutoProvLdapURL "ldap://mail.domain.tld:389"
+zmprov md prue.ba zimbraAutoProvLdapURL "ldap://freeipa.domain.tld:389"
 zmprov md prue.ba zimbraAutoProvMode LAZY
 zmprov md prue.ba zimbraAutoProvNotificationBody "Your account has been auto provisioned.  Your email address is ${ACCOUNT_ADDRESS}."
 zmprov md prue.ba zimbraAutoProvNotificationFromAddress prov-admin@prue.ba
 zmprov md prue.ba zimbraAutoProvNotificationSubject "New account auto provisioned"
 ```
-Remember to change "cn=accounts,dc=domain,dc=tld" and "ldap://mail.domain.tld:389" accornding to your needs
+Remember to change "cn=accounts,dc=domain,dc=tld", (uid=%u)" and "ldap://freeipa.domain.tld:389" accornding to your needs, and put exactly the same you give in dialog wizard.
 
-Thats is ! you have configured a Zimbra Server with external LDAP accounts
+That is ! you have configured a Zimbra Server with external LDAP accounts
 
 ## Install Zimbra Proxy Server
 
