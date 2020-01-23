@@ -524,10 +524,113 @@ Zimbra will start to install, go for another coffe, Java presents it:
 
 Now, copy the created config file to the other node:
 
-scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/
+scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
 
 
 ## Install the SECOND node
+
+**WARNING:** This procedure MUST be done with zimbra02 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
+
+```
+pcs cluster stop zimbra02.domain.tld
+```
+
+Now, in zimbra02, if you do:
+
+```
+pcs status
+```
+
+You will get a message like this:
+
+```
+Error: cluster is not currently running on this node
+```
+
+And in zimbra01 "pcs status" command MUST get you something like this:
+
+```
+Online: [ zimbra01.domain.tld ]
+OFFLINE: [ zimbra02.domain.tld ]
+
+Full list of resources:
+
+virtual_ip	(ocf::heartbeat:IPaddr2):	Started zimbra01.domain.tld
+svczimbra	(ocf::heartbeat:zimbractl):	Started zimbra01.domain.tld
+zimbra_fs	(ocf::heartbeat:Filesystem):	Started zimbra01.domain.tld
+```
+
+Now, in the second server (zimbra02) make this:
+
+```
+mkdir /opt/zimbra
+mkdir /root/zimbra && cd /root/zimbra
+wget https://files.zimbra.com/downloads/8.8.15_GA/zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
+./install.sh -s
+```
+
+Follow the instaler questions with the same options, make sure they are the same:
+
+```
+  Do you agree with the terms of the software license agreement? [N] y
+  Use Zimbra's package repository [Y]
+  Install zimbra-ldap [Y] 
+  Install zimbra-logger [Y] 
+  Install zimbra-mta [Y] 
+  Install zimbra-dnscache [Y] 
+  Install zimbra-snmp [Y] 
+  Install zimbra-store [Y] 
+  Install zimbra-apache [Y] 
+  Install zimbra-spell [Y] 
+  Install zimbra-memcached [Y] 
+  Install zimbra-proxy [Y] 
+  Install zimbra-drive [Y] 
+  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
+  Install zimbra-chat [Y] N  <----- choose N
+  The system will be modified.  Continue? [N] Y
+```
+
+Cofee time (well... maybe it will be no good for health, tea will aso works).
+
+When it finishes:
+
+```
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+```
+
+And now, use the same config file (the file you copies by SCP in previous steps)
+
+```
+/opt/zimbra/libexec/zmsetup.pl -c /root/zmconfig.log
+```
+
+NOTE: It is possible some processes fails, because hostnames and the virtual IP: it does not matter, because the important thing is the zimbra user ans services creation in the OS, not the functions of zimbra itself (because they actually are already intalles on the first node).
+
+After it, stop zimbra services and get rid of all files created by the installer:
+```
+/etc/init.d/zimbra stop
+mv /opt/zimbra /root/old-zimbra
+mkdir /opt/zimbra
+```
+
+Now, restore cluster in zimbra02:
+
+```
+pcs cluster start zimbra02.domain.tld
+```
+
+
+So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) zimbra01 will pass all services to zimbra02 (waiting, with tea on hand) and viceversa. You can follow the process of passing one node to another with:
+
+```
+watch pcs status
+```
+
+(CONTOL + C to exit)
 
 
 # Set LDAP Auto-Provission:
