@@ -11,9 +11,8 @@ zimbra01.domain.tld 	192.168.0.2	(Zimbra Active Server)
 zimbra02.domain.tld	192.168.0.3	(Zimbra Passive Server)
 proxy1.domain.tld 	192.168.0.4	(first zimbra-proxy server)
 proxy2.domain.tld 	192.168.0.5	(second zimbra-proxy server)
+mail.domain.tld		192.168.0.254   (virtual IP for cluster)
 ```
-
-Also, you will need a free IP address to assign virtual IP when configuring the cluster (192.168.0.254, for example)
 
 Harrdware Requirements for Zimbra Servers:
 
@@ -43,7 +42,7 @@ yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core liba
 3) It is important to set an FQDN hostname:
 
 ```
-hostnamectl set-hostname "mail.domain.tld" && exec bash
+hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
 ```
 
 4) Next, put the propper hostname and ip in /etc/hosts
@@ -426,8 +425,14 @@ qm set 101 -ide1 /dev/md0
 
 This will add /dev/md0 to 101 VM id
 
+It is needed to make temporary the address resolution of "**mail.domain.tld**" to point to this server, so change /etc/hosts line to:
 
-1) Download and Install the Software:
+
+```
+192.168.0.254	mail.domain.tld mail 
+```
+
+Download and Install the Software:
 
 ```
 mkdir /root/zimbra && cd /root/zimbra
@@ -438,11 +443,7 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ```
 Note "-s" option: it will install the software without configure it. We will make it later.
 
-
-
-1) Install 
-
-1) The instaler will ask you several questions, choose the following options:
+The instaler will ask you several questions, choose the following options:
 
 ```
   Do you agree with the terms of the software license agreement? [N] y
@@ -467,7 +468,7 @@ Note the "N" option in both zimbra-imapd and zimbra-chat. The impad component is
 
 Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
 
-12) Fix CA paths:
+Fix CA paths:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -490,19 +491,19 @@ Change domain name? [Yes] <---- press ENTER
 Create domain: [zimbra01.domain.tld] domain.tld <----- your MX host here
 ```
 
-12) Set Zimbra Admin Password:
+Set Zimbra Admin Password:
 
 When prompt shows text **"Address unconfigured (++) items (? - help)"** press 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
 
 After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
 
-13) Set Domain in LDAP:
+Set Domain in LDAP:
 
 If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
 
 Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and verify if it needed to change default domain to "domain.tld" (or if already configured, it depends on your DNS)
 
-14) Install Zimbra server:
+Install Zimbra server:
 
 When you have set it, return to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message.
 
@@ -524,6 +525,12 @@ Now, copy the created config file to the other node:
 
 scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
 
+
+Now, delete "**mail.domain.tld**" line in /etc/hosts
+
+```
+hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
+```
 
 ## Install the SECOND node
 
@@ -558,7 +565,9 @@ svczimbra	(ocf::heartbeat:zimbractl):	Started zimbra01.domain.tld
 zimbra_fs	(ocf::heartbeat:Filesystem):	Started zimbra01.domain.tld
 ```
 
-Now, in the second server (zimbra02) make this:
+In the second server (zimbra02):
+
+It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
 
 ```
 mkdir /opt/zimbra
@@ -606,8 +615,6 @@ And now, use the same config file (the file you copies by SCP in previous steps)
 /opt/zimbra/libexec/zmsetup.pl -c /root/zmconfig.log
 ```
 
-NOTE: It is possible some processes fails, because hostnames and the virtual IP: it does not matter, because the important thing is the zimbra user ans services creation in the OS, not the functions of zimbra itself (because they actually are already intalles on the first node).
-
 After it, stop zimbra services and get rid of all files created by the installer:
 ```
 /etc/init.d/zimbra stop
@@ -616,13 +623,15 @@ mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
 
+And delete the /etc/hosts line with "**mail.domain.tld**" definition
+
 Now, restore cluster in zimbra02:
 
 ```
 pcs cluster start zimbra02.domain.tld
 ```
 
-So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) zimbra01 will pass all services to zimbra02 (waiting, with tea on hand) and viceversa. You can follow the process of passing one node to another with:
+So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) zimbra01 will pass all services to zimbra02 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
 
 ```
 watch pcs status
