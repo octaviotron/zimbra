@@ -22,7 +22,7 @@ Harrdware Requirements for Zimbra Servers:
 
 ## Common Process (for all servers)
 
-This are the needed steps for installing all zimbra nodes (both mailbox and proxies):
+This are the needed steps for installing all zimbra nodes (both mailboxex, proxies needs different approach):
 
 First, install Centos 7 with support for English and your native language (if any) and update all your systems: 
 
@@ -112,6 +112,30 @@ Remember when you finnish all processes to enable it again:
 systemctl start firewalld
 systemctl enable firewalld
 ```
+
+Zimbra will use RSYSLOG for zimbra-logger so it is needed to do this for gettin it to work (in both cluster nodes):
+
+In /etc/sysconfig/rsyslog file, modify the options values:
+```
+SYSLOGD_OPTIONS="-r -m 0"
+```
+
+And in /etc/rsyslog.conf, uncomment the following lines to allow remote logs:
+```
+$ModLoad imudp
+$UDPServerRun 514
+
+$ModLoad imtcp
+$InputTCPServerRun 514
+```
+
+Finally, reload the daemon:
+```
+systemctl restart rsyslog
+```
+
+Remember to do this **IN BOTH** zimbra01 and zimbra02 servers.
+
 
 At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra** in both nodes, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
 
@@ -465,11 +489,9 @@ The instaler will ask you several questions, choose the following options:
   Install zimbra-proxy [Y] 
   Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
-  Install zimbra-chat [Y] N  <----- choose N
+  Install zimbra-chat [Y]
   The system will be modified.  Continue? [N] Y
 ```
-
-Note the "N" option in both zimbra-imapd and zimbra-chat. The impad component is BETA and is not recommemded for production environments, and Zimbra Chat provided with 8.8.15 installer provides a buggy zimlet: we will install a fixed one later.
 
 Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
 
@@ -537,6 +559,7 @@ Now, delete "**mail.domain.tld**" line in /etc/hosts
 hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
 ```
 
+
 ## Install the SECOND node
 
 **WARNING:** This procedure MUST be done with zimbra02 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
@@ -600,7 +623,7 @@ Follow the instaler questions with the same options, make sure they are the same
   Install zimbra-proxy [Y] 
   Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
-  Install zimbra-chat [Y] N  <----- choose N
+  Install zimbra-chat [Y] 
   The system will be modified.  Continue? [N] Y
 ```
 
@@ -689,8 +712,51 @@ Thats is ! you have configured a Zimbra Server with external LDAP accounts
 
 ## Install Zimbra Proxy Server
 
-Repeat common process steps, but in ./install.sh choose only to install memcached and proxy components: 
+Install all needed packages:
+
 ```
+yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
+```
+
+It is important to set an FQDN hostname:
+
+```
+hostnamectl set-hostname "proxy01.domain.tld" && exec bash 
+```
+
+Next, put the propper hostname and ip in /etc/hosts
+
+```
+192.168.0.4     proxy01.domain.tld     proxy01
+```
+
+If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
+
+```
+ipa-client-install --enable-dns-updates
+```
+
+Otherwise, insert the propper DNS record to solve "proxy01.domain.tld"
+
+
+Disable SELinux Policies in all systems:
+
+First, disable SELinux in the current running system:
+
+```
+setenforce 0
+```
+
+Then, disable it in the next boot, changing the following line in /etc/selinux/config
+```
+SELINUX=permissive
+```
+
+Now run the installer (with -s option):
+
+```
+./install.sh -s
+
 Do you agree with the terms of the software license agreement? [N] Y
 Use Zimbra's package repository [Y]
 Install zimbra-ldap [Y] N
@@ -701,29 +767,83 @@ Install zimbra-snmp [Y] N
 Install zimbra-store [Y] N
 Install zimbra-apache [Y] N
 Install zimbra-spell [Y] N
-**Install** **zimbra-memcached** **[Y]** **Y**
-**Install** **zimbra-proxy** **[Y]** **Y**
+Install zimbra-memcached [Y] N
+Install zimbra-proxy [Y] Y <----------------- "y" option only on this
+
 The system will be modified.  Continue? [N] Y
 ```
 
-1: 2) Ldap master host
-   4) Ldap Admin password
+In many recipes and howtos zimbra-memcached is installed with zimbra-proxy, but the truth is there is only one ziimbra-memcached needed for zimbra services to work and in all tests, only zimbra-proxy package selected gives the expected behavior. Besides the installer will download and install zimbra-memcached, only the mailboxes servers will attend tho this services requests.
 
-2: 12) Bind password for nginx ldap user
+Wait for the install process (lemonade maybe?) ant when it finnishes run:
+
+```
+mkdir -p /opt/zimbra/java/jre/lib/security/
+ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
+chown -R  zimbra.zimbra /opt/zimbra/java
+/opt/zimbra/libexec/zmsetup.pl
+```
+
+You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (zimbra01 or zimbra02, the one is alive and as master node in cluster) and run:
+
+```
+su - zimbra
 zmlocalconfig -s ldap_nginx_password
-ldap_nginx_password = zxsARJ8G
+```
 
+Now in proxy installer menu, go to Option 1 "Common Configuration" and choose the option 2 "**Ldap master host**". Put here the virtual IP hostname: "**mail.domain.tld**"
+
+Then choose option 4 "Ldap Admin password" and put the one you get from mailboxes servers. When set, it will automaticly connect and retrieve all zimbra services configuration via LDAP:
+
+```
+Setting defaults from ldap...done.
+```
+
+Now, go to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message, and go to option 2 "zimbra-proxy", then option 12 "Bind password for nginx ldap user" and put the same you get from "zmlocalconfig -s ldap_nginx_password" in mailbox server.
+
+Once this password is set, return to main menu and finnish the configuration:
+
+```
 *** CONFIGURATION COMPLETE - press 'a' to apply
-Select from menu, or press 'a' to apply config (? - help) a
+Select from menu, or press 'a' to apply config (? - help) a  <------ press "a" and ENTER here
 Save configuration data to a file? [Yes]
 Save config in file: [/opt/zimbra/config.15941] 
 Saving config in /opt/zimbra/config.15941...done.
-The system will be modified - continue? [No] Yes
+The system will be modified - continue? [No] Yes <---- "Yes" and ENTER
+...
 Notify Zimbra of your installation? [Yes]
-
+...
 Configuration complete - press return to exit 
+```
 
-init 6
+To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (zimbra01 or zimbra02, the one serving as master) and in proxy01 server do:
+
+```
+su - zimbra
+/opt/zimbra/bin/zmsshkeygen
+/opt/zimbra/bin/zmupdateauthkeys
+exit;
+```
+
+
+Then, when done, in both servers do also:
+```
+/opt/zimbra/libexec/zmsyslogsetup
+```
+
+Now go to /etc/rsyslog.conf in all hosts (mailboxes and proxies) and comment out all lines with "@mail.domain.tld" and remove/comment the ones to point lo local files, so it has to be like this (in all servers!):
+
+```
+local0.*                @mail.prue.ba
+local1.*                @mail.prue.ba
+auth.*                  @mail.prue.ba
+mail.*                  @mail.prue.ba
+# local0.*                -/var/log/zimbra.log
+# local1.*                -/var/log/zimbra-stats.log
+# auth.*                  -/var/log/zimbra.log
+```
+
+This is a bug fix: all logs comes in a loop when the server sends their messages "remotely to himself". If you skip this step, you will go empty of space in local disk as soon as the filesystem speed allows it.
 
 ## important
 
