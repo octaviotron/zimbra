@@ -24,7 +24,7 @@ Harrdware Requirements for Zimbra Servers:
 
 This are the needed steps for installing all zimbra nodes (both mailbox and proxies):
 
-1) First, install Centos 7 with support for English and your native language (if any) and update all your systems: 
+First, install Centos 7 with support for English and your native language (if any) and update all your systems: 
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -33,25 +33,25 @@ yum -y update
 
 ```
 
-2) Install all needed packages:
+Install all needed packages:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
 ```
 
-3) It is important to set an FQDN hostname:
+It is important to set an FQDN hostname:
 
 ```
 hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
 ```
 
-4) Next, put the propper hostname and ip in /etc/hosts
+Next, put the propper hostname and ip in /etc/hosts
 
 ```
 192.168.0.1     mail.domain.tld     mail
 ```
 
-5) Disable SELinux Policies in all systems:
+Disable SELinux Policies in all systems:
 
 First, disable SELinux in the current running system:
 
@@ -64,15 +64,13 @@ Then, disable it in the next boot, changing the following line in /etc/selinux/c
 SELINUX=permissive
 ```
 
-6) OPTIONAL: If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
+OPTIONAL: If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
 
 ```
 ipa-client-install --enable-dns-updates
 ```
 
-7) DNS records have to give propper answer to MX requests:
-
-If using FreeIPA, next step is needed, otherwise add MX record in whichever DNS server are you using:
+DNS records have to give propper answer to MX requests, if using FreeIPA, next step is needed, otherwise add MX record in whichever DNS server are you using:
 
 ```
 kinit admin
@@ -85,7 +83,7 @@ To verify MX record, ask the DNS:
 dig @freeipa.domain.tld domain.tld mx
 ```
 
-9) Disable postfix: 
+Disable postfix: 
 
 By default CentOS has a postfix running service. It will be needed to disable in order to make IP 25/tcp port available.
 
@@ -94,7 +92,7 @@ systemctl stop postfix
 systemctl disable postfix
 ```
 
-9) Enable prots in Firewall:
+Enable prots in Firewall:
 
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
