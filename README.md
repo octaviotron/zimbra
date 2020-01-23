@@ -413,9 +413,7 @@ pcs cluster cib-push add_fs
 
 
 
-
-
-## Installing MASTER (ACTIVE) ZIMBRA
+## Installing first node (zimbra01.domain.tld)
 
 At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra**, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
 
@@ -613,6 +611,7 @@ NOTE: It is possible some processes fails, because hostnames and the virtual IP:
 After it, stop zimbra services and get rid of all files created by the installer:
 ```
 /etc/init.d/zimbra stop
+killall -9 -u zimbra
 mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
@@ -622,7 +621,6 @@ Now, restore cluster in zimbra02:
 ```
 pcs cluster start zimbra02.domain.tld
 ```
-
 
 So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) zimbra01 will pass all services to zimbra02 (waiting, with tea on hand) and viceversa. You can follow the process of passing one node to another with:
 
@@ -665,24 +663,16 @@ zmprov md prue.ba +zimbraAutoProvAttrMap sn=sn
 zmprov md prue.ba zimbraAutoProvAuthMech LDAP
 zmprov md prue.ba zimbraAutoProvLdapSearchBase "cn=accounts,dc=domain,dc=tld"
 zmprov md prue.ba zimbraAutoProvLdapSearchFilter "(uid=%u)"
-zmprov md prue.ba zimbraAutoProvLdapURL "ldap://192.168.0.100:389"
+zmprov md prue.ba zimbraAutoProvLdapURL "ldap://mail.domain.tld:389"
 zmprov md prue.ba zimbraAutoProvMode LAZY
 zmprov md prue.ba zimbraAutoProvNotificationBody "Your account has been auto provisioned.  Your email address is ${ACCOUNT_ADDRESS}."
 zmprov md prue.ba zimbraAutoProvNotificationFromAddress prov-admin@prue.ba
 zmprov md prue.ba zimbraAutoProvNotificationSubject "New account auto provisioned"
 ```
-Remember to change "cn=accounts,dc=domain,dc=tld" and "ldap://192.168.0.100:389" accornding to your needs
+Remember to change "cn=accounts,dc=domain,dc=tld" and "ldap://mail.domain.tld:389" accornding to your needs
 
 Thats is ! you have configured a Zimbra Server with external LDAP accounts
 
-DIsable TLS:
-```
-zmlocalconfig -e ssl_allow_untrusted_certs=true 
-zmlocalconfig -e ldap_starttls_supported=0
-zmlocalconfig -e ldap_starttls_required=false
-zmlocalconfig -e ldap_common_require_tls=0
-zmcontrol restart
-```
 ## Install Zimbra Proxy Server
 
 Repeat common process steps, but in ./install.sh choose only to install memcached and proxy components: 
@@ -847,3 +837,11 @@ LOGS: https://wiki.zimbra.com/wiki/Using_log4j_to_Configure_mailboxd_Logging
 - Show config parameter: zmprov gcf [parameter]
 
 
+DIsable TLS:
+```
+zmlocalconfig -e ssl_allow_untrusted_certs=true 
+zmlocalconfig -e ldap_starttls_supported=0
+zmlocalconfig -e ldap_starttls_required=false
+zmlocalconfig -e ldap_common_require_tls=0
+zmcontrol restart
+```
