@@ -844,100 +844,18 @@ mail.*                  @mail.prue.ba
 
 This is a bug fix: all logs comes in a loop when the server sends their messages "remotely to himself". If you skip this step, you will go empty of space in local disk as soon as the filesystem speed allows it.
 
-## important
-
-Init at boot:
-
-```
-update-rc.d zimbra defaults
-```
-
-On all zimbra servers do:
-
-```
-zmsshkeygen
-zmupdateauthkeys
-```
-
-Disable TLS:
-```
-zmlocalconfig -e ssl_allow_untrusted_certs=true 
-zmlocalconfig -e ldap_starttls_supported=0
-zmlocalconfig -e ldap_starttls_required=false
-zmlocalconfig -e ldap_common_require_tls=0
-zmcontrol restart
-```
-
-Enable Logs:
-```
-/opt/zimbra/libexec/zmsyslogsetup
-
-/etc/sysconfig/rsyslog: "-r" 
-
-    Uncomment the following lines in /etc/rsyslog.conf
-
-    $modload imudp
-    $UDPServerRun 514
-
-    Restart rsyslog
-
-For rsyslog on RHEL or CentOS:
-
-    Uncomment the following lines in /etc/rsyslog.conf.
-
-    # Provides UDP syslog reception
-    #$ModLoad imudp
-    #$UDPServerRun 514
-
-    # Provides TCP syslog reception
-    #$ModLoad imtcp
-    #$InputTCPServerRun 514
-```
-
-
-16) OPTIONAL: configure OpenDKIM service:
-
-Open a root console in Zimbra server and put the following commands:
-
-```
-/opt/zimbra/libexec/zmdkimkeyutil -a -d domain.tld
-
-
-35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey	IN	TXT	( "v=DKIM1; k=rsa; "
-	  "p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCm"
-	  "i4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB" )  ; ----- DKIM key 35BC9092-38DA-11EA-965D-1D43A6F2AEB9 for prue.ba
+## Final words
 
 
 
-registro: 35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey
-tipo: TXT
-valor: v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCmi4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB
+## Links (used to write this document)
 
-```
-
-
-
-
-
-PROXY:
- en el proxy:
-	/opt/zimbra/libexec/zmproxyconfig -e -m -H proxy.node.service.hostname
-
- en el servidor mailbox: 
-	restart mailboxd
-
-	/opt/zimbra/libexec/zmproxyconfig -e -m -H mailbox.node.service.hostname
-	/opt/zimbra/libexec/zmproxyconfig -e -w -H mailbox.node.service.hostname
-
-Used documentation links:
-
-* Zimbra Installation Guide: https://zimbra.github.io/installguides/8.8.12/multi.html
+* Zimbra Installation Guide: https://zimbra.github.io/installguides/8.8.12/multi.html       
 * Zimbra Admin Guide: https://zimbra.github.io/adminguide/8.8.15/adminguide-8.8.15.pdf
-* Mulli Server Guide: https://zimbra.github.io/installguides/latest/multi.html
-
 * zmprov attributes: https://wiki.zimbra.com/wiki/How_to_get_details_of_zmprov_attributes/zmlocalconfig_attributes
+* Recipe: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
 
-REVISAR: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
+Other likns:
 
 * https://www.zimbra.com/docs/ne/8.6.0/multi_server_install/wwhelp/wwhimpl/js/html/wwhelp.htm#href=multi_server_install.Multiple-Server_Installation.html
 * https://zimbra.github.io/installguides/8.8.9/multi.html
@@ -947,30 +865,23 @@ REVISAR: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/reci
 * https://linoxide.com/linux-how-to/howto-install-configure-zimbra-8-6-multi-server-centos-7/
 * https://computingforgeeks.com/zimbra-multi-server-installation-on-centos-7/
 * https://www.zimbra.com/docs/ne/4.0.5/multi_server_install/clustering.7.1.html#1066634
-
 BACKUP: https://forums.zimbra.org/viewtopic.php?t=65435
 	https://wiki.zimbra.com/wiki/Zimbra_DR_Strategy
-
-
 DKIM: https://wiki.zimbra.com/wiki/Best_Practices_on_Email_Protection:_SPF,_DKIM_and_DMARC
-
 Zimbra Desktop: https://wiki.zimbra.com/wiki/Installing_Zimbra_Desktop_on_64bit_Linux
 		https://computingforgeeks.com/how-to-install-zimbra-desktop-on-ubuntu-18-04-bionic-beaver/
-
 PROXY:	https://wiki.zimbra.com/wiki/Zimbra_Proxy_Guide
-
-SYSTEMD: https://github.com/Zimbra-Community/zimbra-tools/blob/master/zimbra.service
-
 LOGS: https://wiki.zimbra.com/wiki/Using_log4j_to_Configure_mailboxd_Logging
 
-# Notes
 
-- zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
-- Get LDAP password: zmlocalconfig -s zimbra_ldap_password ldap_master_url
-- Show config parameter: zmprov gcf [parameter]
+# Notes (used for testing purposes)
 
+How to get config parameter using zmprov:
+```
+zmprov gcf [parameter]
+```
 
-DIsable TLS:
+How to disable TLS in LDAP:
 ```
 zmlocalconfig -e ssl_allow_untrusted_certs=true 
 zmlocalconfig -e ldap_starttls_supported=0
@@ -978,3 +889,22 @@ zmlocalconfig -e ldap_starttls_required=false
 zmlocalconfig -e ldap_common_require_tls=0
 zmcontrol restart
 ```
+
+Howto configure OpenDKIM service:
+
+Open a root console in Zimbra server and put the following commands:
+```
+/opt/zimbra/libexec/zmdkimkeyutil -a -d domain.tld
+
+35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey	IN	TXT	( "v=DKIM1; k=rsa; " "p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCm"
+	  "i4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB" )  ; ----- DKIM key 35BC9092-38DA-11EA-965D-1D43A6F2AEB9 for prue.ba
+
+Register: 35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey
+Type: TXT
+Value: v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCmi4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB
+```
+To change "mynetworks in zimbra postfix:
+```
+zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
+```
+
