@@ -908,3 +908,16 @@ To change "mynetworks in zimbra postfix:
 zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
 ```
 
+
+How to change buggy chat zimlet:
+
+```
+zmzimletctl disable com_zextras_chat_open
+zmzimletctl undeploy com_zextras_chat_open
+zmprov fc all
+zmmailboxdctl restart
+# yum install zimbra-chat
+zmprov fc all
+zmmailboxdctl restart
+```
+See https://wiki.zimbra.com/wiki/Using_zmstat-chart_to_generate_statistics
