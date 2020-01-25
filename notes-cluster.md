@@ -39,17 +39,18 @@ Alternatives are switched PDUs, like APC's AP7900.
 pcs stonith create xvmfence_mds-01-1 fence_xvm pcmk_host_list="mds-01 mds-02" action="reboot" key_file=/etc/cluster/fence_xvm.key multicast_address=225.0.1.12
 ```
 
-Proxmox: fence_virtd https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
-CentOS VMs: fence_xvm https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
+- Proxmox: servicio fence_virtd https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
+- Proxmox: agente fence_virsh https://linux.die.net/man/8/fence_virsh
+- CentOS VMs: agente fence_xvm https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
 
-- Proxmox Fencing: https://pve.proxmox.com/wiki/Fencing  <---- banco
-                   https://linux.die.net/man/8/fence_virsh <---- agente en PVE
 
 - KVM fencing: https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
+- Fencing Pacemaker: https://www.unixarena.com/2016/01/rhel-7-configure-fencing-pacemaker.html/
 
-- KVM-PACEMAKER: https://access.redhat.com/solutions/293183 
-                  https://icicimov.github.io/blog/virtualization/Pacemaker-VM-cluster-fencing-in-Proxmox-with-fence-pve/
-                  https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
+## KVM-PACEMAKER
+- How to configure Red Hat Cluster with fencing of two KVM guests running on two different KVM hosts https://access.redhat.com/solutions/293183 
+- https://icicimov.github.io/blog/virtualization/Pacemaker-VM-cluster-fencing-in-Proxmox-with-fence-pve/
+- https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
                   
                
 - https://www.epilis.gr/en/blog/2018/07/02/fencing-linux-vm-cluster/
