@@ -1,0 +1,9 @@
+https://bugzilla.zimbra.com/show_bug.cgi?id=88945
+
+[root@zimbra01 log]# cat /etc/rsyslog.d/listen.conf 
+$SystemLogSocketName /run/systemd/journal/syslog
+
+Rsyslog /dev/log
+
+[root@zimbra01 log]# ls /run/systemd/journal/syslog
+ls: no se puede acceder a /run/systemd/journal/syslog: No existe el fichero o el directorio
