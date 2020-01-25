@@ -37,6 +37,11 @@ Alternatives are switched PDUs, like APC's AP7900.
 ## Fencing:
 ```
 pcs stonith create xvmfence_mds-01-1 fence_xvm pcmk_host_list="mds-01 mds-02" action="reboot" key_file=/etc/cluster/fence_xvm.key multicast_address=225.0.1.12
+
+
+pcs stonith create fence_pcmk1_xvm fence_xvm port="pcmk1" pcmk_host_list="pcmk1.alteeve.ca"
+pcs stonith create fence_pcmk2_xvm fence_xvm port="pcmk2" pcmk_host_list="pcmk2.alteeve.ca"
+pcs stonith create fence_pcmk3_xvm fence_xvm port="pcmk3" pcmk_host_list="pcmk3.alteeve.ca"
 ```
 
 - Proxmox: servicio fence_virtd https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
