@@ -2,7 +2,7 @@
 
 **Zimbra 8.8 (ZCS) in active-passive cluster, with multiple Proxy Servers and external LDAP (FreeIPA) accounts provisioning**
 
-This documentation is intended to have a full guide of how to install one server with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case).
+This documentation is intended to have a full guide of how to install one cluster with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case) in CentOS 7.
 
 Theese are the hostnames and IPs we will use:
 ```
