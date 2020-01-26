@@ -1,0 +1,6 @@
+zimbra-store:
+   *Configure for use with mail proxy.
+   *Configure for use with web proxy.
+   Enable version update checks.
+   Enable version update notifications.
+
