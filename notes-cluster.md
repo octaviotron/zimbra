@@ -1,3 +1,46 @@
+En el hypervisor:
+```
+apt install fence-agents
+```
+
+
+
+```
+yum -y install pacemaker pcs corosync resource-agents pacemaker-cli fence-agents-all
+```
+
+All nodes
+```
+echo "hacluster:my_password"|chpasswd <--- all nodes
+systemctl start pcsd
+systemctl status pcsd
+mkdir -p /etc/cluster
+```
+Node 1:
+```
+pcs cluster auth cups01.prue.ba cups02.prue.ba cups03.prue.ba
+pcs cluster setup --name cluster_cups cups01.prue.ba cups02.prue.ba cups03.prue.ba
+pcs cluster start --all
+pcs status cluster
+
+pcs cluster cib stonith_cfg
+
+pcs stonith create MyFence1 fence_virt port="cups01" pcmk_host_list="cups01.prue.ba"
+pcs stonith create MyFence2 fence_virt port="cups02" pcmk_host_list="cups02.prue.ba"
+pcs stonith create MyFence3 fence_virt port="cups03" pcmk_host_list="cups03.prue.ba"
+
+pcs stonith confirm cups02.prue.ba
+
+```
+
+On KVM host:
+```
+mkdir -p /etc/cluster
+cd /etc/cluster/
+dd if=/dev/urandom of=/etc/cluster/fence_xvm.key bs=4k count=1
+
+```
+
 votequorum:
 Quorum = 2
 
