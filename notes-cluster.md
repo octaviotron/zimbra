@@ -24,6 +24,7 @@ pcs cluster start --all
 pcs status cluster
 
 pcs cluster cib stonith_cfg
+pcs -f stonith_cfg stonith create MyFence03 fence_virt
 
 pcs stonith create MyFence1 fence_virt port="cups01" pcmk_host_list="cups01.prue.ba"
 pcs stonith create MyFence2 fence_virt port="cups02" pcmk_host_list="cups02.prue.ba"
