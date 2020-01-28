@@ -82,6 +82,7 @@ Alternatives are switched PDUs, like APC's AP7900.
 
 - https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
 - https://access.redhat.com/solutions/293183
+- https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
 
 ```
 pcs stonith create xvmfence_mds-01-1 fence_xvm pcmk_host_list="mds-01 mds-02" action="reboot" key_file=/etc/cluster/fence_xvm.key multicast_address=225.0.1.12
