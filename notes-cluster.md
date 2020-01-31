@@ -33,6 +33,7 @@ pcs constraint location fence_host01_id prefers hostname01.domain.tld
 
 pcs property set stonith-enabled=true
 pcs property set no-quorum-policy=suicide
+pcs stonith update fence_host01_id action="off" --force
 
 systemctl enable pcsd
 systemctl enable corosync
