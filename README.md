@@ -2,7 +2,7 @@
 
 **Zimbra 8.8 (ZCS) in active-passive cluster, with multiple Proxy Servers and external LDAP (FreeIPA) accounts provisioning**
 
-This documentation is intended to have a full guide of how to install one cluster with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case) in CentOS 7.
+This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case). Cluster Nodes are going to be installed into Proxmox KVM hosts.
 
 Theese are the hostnames and IPs we will use:
 ```
@@ -25,7 +25,7 @@ Zimbra01-03 are the mailbox nodes we are going to install into a corosync/pacema
 
 Hardware Requirements for Zimbra Servers:
 
-- 3 servers (may be virtual) with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
+- 3 KVM hosts with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
 - SAN/NAS storage for mailboxes in cluster servers with about 1TB of free space (depending on your traffic)
 
 
