@@ -28,6 +28,22 @@ Hardware Requirements for Zimbra Servers:
 - 3 KVM hosts with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
 - SAN/NAS storage for mailboxes in cluster servers with about 1TB of free space (depending on your traffic)
 
+## DNS MX record
+
+It is necessary to have DNS records giving propper answers to MX requests. In this example FreeIPA is used as DNS and LDAP services, so in any enrolled machine do:
+
+```
+kinit admin
+ipa dnsrecord-add domain.tld @ --mx-rec="0 mail.domain.tld."
+```
+
+If you are not using FreeIPA just ensure MX has propper answers, 
+
+To verify MX record, ask the DNS:
+
+```
+dig @freeipa.domain.tld domain.tld mx
+```
 
 ## Common Process (for all servers)
 
@@ -45,7 +61,8 @@ yum -y update
 Install all needed packages:
 
 ```
-yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
+yum -y install ipa-client unzip net-tools sysstat openssh-clients \
+    perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
 ```
 
 It is important to set an FQDN hostname:
@@ -79,18 +96,6 @@ OPTIONAL: If you are using FreeIPA as LDAP external service, it is necessary to 
 ipa-client-install --enable-dns-updates
 ```
 
-DNS records have to give propper answer to MX requests, if using FreeIPA, next step is needed, otherwise add MX record in whichever DNS server are you using:
-
-```
-kinit admin
-ipa dnsrecord-add domain.tld @ --mx-rec="0 mail.domain.tld."
-```
-
-To verify MX record, ask the DNS:
-
-```
-dig @freeipa.domain.tld domain.tld mx
-```
 
 Disable postfix: 
 
@@ -261,9 +266,7 @@ On both zimbra01 (active server) and zimbra02 (passive server) reload daemons af
 systemctl daemon-reload
 ```
 
-```
-vi /usr/lib/ocf/resource.d/heartbeat/zimbractl
-```
+Now create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
 
 ```bash
 #!/bin/sh
@@ -438,16 +441,35 @@ validate-all)
 esac
 ```
 
+And give 755 permission:
+
+```
+chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
+```
+
+Coy to the other nodes and make the same:
 ```
 scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@zimbra02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
-chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl (both)
+chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
+```
 
+Now in one of the nodes do:
+```
 pcs resource create svczimbra ocf:heartbeat:zimbractl op monitor interval=30s
 pcs resource op remove svczimbra monitor
 pcs constraint colocation add svczimbra virtual_ip INFINITY
 pcs constraint order virtual_ip then svczimbra
-pcs status
+```
 
+This will create "zimbractl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated. Check it is a loades cluster resource:
+
+```
+pcs status
+```
+
+Next step makes **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the master node:
+
+```
 cd /
 pcs cluster cib add_fs
 pcs -f add_fs resource create zimbra_fs Filesystem device="/dev/sdX" directory="/opt/zimbra" fstype="ext4"
@@ -455,8 +477,6 @@ pcs -f add_fs constraint colocation add svczimbra zimbra_fs INFINITY
 pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
 ```
-
-
 
 ## Installing first node (zimbra01.domain.tld)
 
