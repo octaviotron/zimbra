@@ -1,10 +1,45 @@
-En el hypervisor:
+On hypervisor:
 ```
 apt install fence-agents
 ```
 
+On nodes:
+```
+cd
+yum install git gcc make automake autoconf libtool pexpect python-requests
+git clone https://github.com/ClusterLabs/fence-agents.git
+cd fence-agents/
+./autogen.sh
+./configure --with-agents=pve
+make && make install
+fence_pve --version
+```
+
+Ask fence_pve from a cluster node:
+```
+/usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
+```
+
+Create Fencing resource in cluster
+
+```
+pcs stonith create fence_host01_id fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
+  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
+  pcmk_host_list="hostname01.domain.tld" node_name="pve"
+  
+pcs constraint location fence_host01_id prefers hostname01.domain.tld
+
+(repeat for each node)
+
+pcs property set stonith-enabled=true
+pcs property set no-quorum-policy=suicide
+
+systemctl enable pcsd
+systemctl enable corosync
+systemctl enable pacemaker
 
 
+```
 ```
 yum -y install pacemaker pcs corosync resource-agents pacemaker-cli fence-agents-all
 ```
