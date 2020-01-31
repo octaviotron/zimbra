@@ -6,15 +6,24 @@ This documentation is intended to have a full guide of how to install one cluste
 
 Theese are the hostnames and IPs we will use:
 ```
-freeipa.domain.tld	192.168.0.1 	(LDAP service)
-zimbra01.domain.tld 	192.168.0.2	(Zimbra Active Server)
-zimbra02.domain.tld	192.168.0.3	(Zimbra Passive Server)
-proxy1.domain.tld 	192.168.0.4	(first zimbra-proxy server)
-proxy2.domain.tld 	192.168.0.5	(second zimbra-proxy server)
-mail.domain.tld		192.168.0.254   (virtual IP for cluster)
+
+zimbra01.domain.tld 	192.168.0.1	(Cluster Node Zimbra Server)
+zimbra02.domain.tld	192.168.0.2	(Cluster Node Zimbra Server)
+zimbra03.domain.tld	192.168.0.3	(Cluster Node Zimbra Server)
+
+mail.domain.tld		192.168.0.10    (virtual IP for cluster)
+
+proxy1.domain.tld 	192.168.0.11	(first zimbra-proxy server)
+proxy2.domain.tld 	192.168.0.12	(second zimbra-proxy server)
+
+hypervisor.domain.tld	192.168.0.100 	(Proxmox KVM hypervisor)
+freeipa.domain.tld	192.168.0.254	(FreeIPA server)
+
 ```
 
-Harrdware Requirements for Zimbra Servers:
+Zimbra01-03 are the mailbox nodes we are going to install into a corosync/pacemaker HA cluster, with a virtual IP as "mail" hostname, and in this example we eill use 2 proxies, but it can be theorical unlimited ones.
+
+Hardware Requirements for Zimbra Servers:
 
 - 3 servers (may be virtual) with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
 - SAN/NAS storage for mailboxes in cluster servers with about 1TB of free space (depending on your traffic)
