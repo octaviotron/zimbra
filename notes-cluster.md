@@ -1,10 +1,15 @@
-# HA Cluster in GNU/Linux
+# Fencing Proxmox Virtual KVM hosts Cluster
 
-This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts.
+This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts with CentOS 7, running in a Proxmox Hypervisor with STONITH.
+
+This is our sample IP addeses:
+
 ```
-cups01.domain.tld 	192.168.0.1
-cups02.domain.tld	  192.168.0.2
-cups03.domain.tld	  192.168.0.3
+cups01.domain.tld   192.168.0.1
+cups02.domain.tld	192.168.0.2
+cups03.domain.tld	192.168.0.3
+
+proxmox.domain.tld  192.168.0.254
 ```
 
 ## On hypervisor:
@@ -14,10 +19,7 @@ apt install fence-agents
 
 ## OS Preparation
 
-
-
-In all nodes (CentOS 7)
-
+In this example all KVM hosts has a fresh install of CentOS 7. This are common steps needed to be executed in all nodes:
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -52,7 +54,7 @@ And in cups03 do:
 hostnamectl set-hostname "cups03.domain.tld" && exec bash 
 ```
 
-Next, put the propper hostname and ip in /etc/hosts in all nodes:
+Next, put the propper hostname and ip in /etc/hosts in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
 
 ```
 192.168.0.1    cups01.domain.tld     cups01
@@ -60,21 +62,17 @@ Next, put the propper hostname and ip in /etc/hosts in all nodes:
 192.168.0.3    cups03.domain.tld     cups03
 ```
 
-Disable SELinux Policies in all systems:
-
-First, disable SELinux in the current running system:
-
+Disable SELinux Policies in all nodes:
 ```
 setenforce 0
 ```
 
-Then, disable it in the next boot, changing the following line in /etc/selinux/config
+Then, disable it for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
 ```
 SELINUX=permissive
 ```
 
 Enable prots in Firewall:
-
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
@@ -87,8 +85,7 @@ systemctl stop firewalld
 systemctl disable firewalld
 ```
 
-Remember when you finnish all processes to enable it again:
-
+Remember later when you finnish to enable it again:
 ```
 systemctl start firewalld
 systemctl enable firewalld
@@ -99,7 +96,6 @@ Set the "hacluster" account password in al nodes:
 ```
 echo "hacluster:your_password"|chpasswd
 ```
-
 (change "your_password" and put there your password)
 
 On all nodes start the cluster:
