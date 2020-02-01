@@ -208,18 +208,13 @@ Create **/usr/lib/ocf/resource.d/heartbeat/cups_ctl** file in all nodes with thi
 #!/bin/sh
 #
 # Resource script for CUPS
-#
 # Description:  Manages CUPS as an OCF resource in
 #               an high-availability setup.
-#
-# Author:       RRMP <tigerlinux@gmail.com>
+# Author:       Octavio Rossell <octavio@gnu.org.ve> modified version of RRMP <tigerlinux@gmail.com> work
 # License:      GNU General Public License (GPL)
 #
-#
 #       usage: $0 {start|stop|reload|monitor|validate-all|meta-data}
-#
 #       The "start" arg starts a CUPS instance
-#
 #       The "stop" arg stops it.
 #
 # OCF parameters:
@@ -234,8 +229,8 @@ Create **/usr/lib/ocf/resource.d/heartbeat/cups_ctl** file in all nodes with thi
 : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
-: ${OCF_RESKEY_binary="zmcontrol"}
-: ${OCF_RESKEY_cups_dir="/opt/cups"}
+: ${OCF_RESKEY_binary="systemctl"}
+: ${OCF_RESKEY_cups_dir="/etc/cups"}
 : ${OCF_RESKEY_cups_user="cups"}
 : ${OCF_RESKEY_cups_group="cups"}
 USAGE="Usage: $0 {start|stop|reload|status|monitor|validate-all|meta-data}";
@@ -250,7 +245,7 @@ meta_data() {
 	cat <<END
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
-<resource-agent name="postfix">
+<resource-agent name="cups">
 <version>0.1</version>
 <longdesc lang="en">
 This script manages CUPS as an OCF resource in a high-availability setup.
