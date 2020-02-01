@@ -23,6 +23,7 @@ In all nodes (CentOS 7)
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 yum -y update
+yum -y upgrade
 ```
 
 Install all needed packages:
