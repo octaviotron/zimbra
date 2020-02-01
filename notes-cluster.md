@@ -156,7 +156,7 @@ To test it, ask fence_pve from each cluster node. You will get a "STATUS: OK" me
 ## Create cluster
 
 
-On any active node:
+On any active node make auth keys share between nodes:
 ```
 pcs cluster auth cups01.domain.tld cups02.domain.tld cups03.domain.tld
 ```
@@ -164,14 +164,18 @@ pcs cluster auth cups01.domain.tld cups02.domain.tld cups03.domain.tld
 This will ask for a user and a password. Put "**hacluster**" as user and the password you set in previous steps.
 
 
-Create the cluster:
+Set a name for the cluster:
 
 ```
 pcs cluster setup --name cluster_cups cups03.domain.tld cups03.domain.tld cups03.domain.tld
+```
+
+Start the cluster:
+```
 pcs cluster start --all
 ```
 
-Check cluster status:
+To check cluster status you can see the output of this commands:
 
 ```
 pcs status cluster
@@ -179,12 +183,12 @@ corosync-cmapctl | grep members
 pcs status corosync
 ```
 
-Disable stonith. It is temporary, needed to configure and activated later:
+Disable stonith. It is temporary, needed to configure and will be activated later:
 ```
 pcs property set stonith-enabled=false
 ```
 
-And disable the quorum policy, also later will be reactivated:
+And disable the quorum policy, also later it will be activated:
 
 ```
 pcs property set no-quorum-policy=ignore
@@ -193,7 +197,7 @@ pcs property
 
 ## Create cluster Virtual IP resource
 
-Now, create the VIRTUAL IP resource:
+Now, create a VIRTUAL IP resource:
 ```
 pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.254 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
 ```
@@ -207,12 +211,15 @@ pcs status resources
 
 You will get a message with a line like this:
 ```
-virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
+virtual_ip     (ocf::heartbeat:IPaddr2):       Started cups01.domain.tls
 ```
+
+This tells cups01 host has the virtual ip assigned. you can ping and open a SSH session to verify it.
+
 
 # Create cluster CUPS daemon control resource
 
-Create **/usr/lib/ocf/resource.d/heartbeat/cups_ctl** file in all nodes with this into it:
+There is no a built-in cups resource available in heartbeat, so create an **/usr/lib/ocf/resource.d/heartbeat/cups_ctl** file in all nodes with this into it:
 
 ```bash
 #!/bin/sh
@@ -376,13 +383,13 @@ And give 755 permission:
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/cups_ctl
 ```
 
-Coy to the other nodes and make the same:
+Copy the resource file to the other nodes:
 ```
 scp /usr/lib/ocf/resource.d/heartbeat/cups_ctl root@cups02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/cups_ctl
 scp /usr/lib/ocf/resource.d/heartbeat/cups_ctl root@cups03.domain.tld:/usr/lib/ocf/resource.d/heartbeat/cups_ctl
 ```
 
-And each node do:
+And in each node do:
 ```
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/cups_ctl
 ```
@@ -398,22 +405,22 @@ Disable resource monitor to make it more independent from cluster status:
 pcs resource op remove svc_cups monitor
 ```
 
-Finnaly set resource order:
+And set resource order:
 ```
 pcs constraint colocation add svc_cups virtual_ip INFINITY
 pcs constraint order virtual_ip then svc_cups
 ```
 
-"svc_cups" now exists as cluster resource and it will be present only if virtual IP is activated. 
+Now "svc_cups" is a cluster resource. It will be present only if virtual IP is activated. 
 
-Check if it is loaded as cluster resource:
+To check if it is loaded as cluster resource:
 ```
 pcs status
 ```
 
 # Create shared filesystem resource
 
-Create shared filesystem resource. It will make /etc/cupss service files mounted only in the active node:
+Create shared filesystem resource. It will make /etc/cups service files mounted only in the active node:
 
 In any active node do:
 
