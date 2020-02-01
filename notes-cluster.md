@@ -34,13 +34,24 @@ yum -y install ipa-client unzip net-tools sysstat openssh-clients \
     git gcc make automake autoconf libtool pexpect python-requests
 ```
 
-It is important to set an FQDN hostname:
+It is important to set an FQDN hostname. In cups01 do:
 
 ```
-hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
+hostnamectl set-hostname "cups01.domain.tld" && exec bash 
 ```
 
-Next, put the propper hostname and ip in /etc/hosts and the other nodes as well:
+In cups02 do:
+
+```
+hostnamectl set-hostname "cups02.domain.tld" && exec bash 
+```
+And in cups03 do:
+
+```
+hostnamectl set-hostname "cups03.domain.tld" && exec bash 
+```
+
+Next, put the propper hostname and ip in /etc/hosts in all nodes:
 
 ```
 192.168.0.1    cups01.domain.tld     cups01
@@ -60,7 +71,6 @@ Then, disable it in the next boot, changing the following line in /etc/selinux/c
 ```
 SELINUX=permissive
 ```
-
 
 Enable prots in Firewall:
 
@@ -82,7 +92,6 @@ Remember when you finnish all processes to enable it again:
 systemctl start firewalld
 systemctl enable firewalld
 ```
-
 
 Set the "hacluster" account password in both servers:
 
