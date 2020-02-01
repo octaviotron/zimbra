@@ -12,14 +12,18 @@ cups03.domain.tld  192.168.0.3
 proxmox.domain.tld  192.168.0.254
 ```
 
-## On hypervisor:
+## Install Fence Agents On Proxmox KVM host:
+
+This is needed to be done on the KVM hypervisor Operating Sistem (in a root console in Proxmox host):
 ```
 apt install fence-agents
 ```
 
 ## OS Preparation
 
-In this example all KVM hosts has a fresh install of CentOS 7. This are common steps needed to be executed in all nodes:
+In this example all virtual hosts has a fresh install of CentOS 7. 
+
+This are common steps needed to be executed on each node (on all of them):
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -60,6 +64,7 @@ Next, put the propper hostname and ip in /etc/hosts in all nodes, when DNS servi
 192.168.0.1    cups01.domain.tld     cups01
 192.168.0.2    cups02.domain.tld     cups02
 192.168.0.3    cups03.domain.tld     cups03
+192.168.0.254  proxmox.domain.tld    proxmox
 ```
 
 Disable SELinux Policies in all nodes:
