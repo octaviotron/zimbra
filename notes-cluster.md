@@ -143,7 +143,7 @@ Ask fence_pve from a cluster node:
 /usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
 ```
 
-## Create cluster resources
+## Create cluster
 
 
 On any active node:
@@ -181,6 +181,8 @@ pcs property set no-quorum-policy=ignore
 pcs property
 ```
 
+## Create cluster resources
+
 Now, create the VIRTUAL IP resource:
 ```
 pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.254 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
@@ -197,6 +199,35 @@ You will get a message with a line like this:
 ```
 virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
 ```
+
+**(TODO: cups "svc_cups" resource)**
+
+
+Now in one of the nodes do:
+```
+pcs resource create svc_cups ocf:heartbeat:cupsctl op monitor interval=30s
+pcs resource op remove svc_cups monitor
+pcs constraint colocation add svc_cups virtual_ip INFINITY
+pcs constraint order virtual_ip then svc_cups
+```
+This will create "cupsctl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated. Check it is a loades cluster resource:
+```
+pcs status
+```
+
+Create shared filesystem resource. It will make /etc/cupss service files mounted only in the active node:
+
+```
+cd /
+pcs cluster cib add_fs
+pcs -f add_fs resource create shared_fs Filesystem device="/dev/sdX" directory="/etc/cups" fstype="ext4"
+pcs -f add_fs constraint colocation add svc_cups shared_fs INFINITY
+pcs -f add_fs constraint order shared_fs then svc_cups
+pcs cluster cib-push add_fs
+```
+
+
+
 
 On each node enable services:
 
