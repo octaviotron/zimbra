@@ -41,7 +41,7 @@ yum -y update
 yum -y upgrade
 ```
 
-Install all needed packages in all nodes too:
+Install needed packages in all nodes too:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
