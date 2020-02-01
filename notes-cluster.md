@@ -300,7 +300,6 @@ Some are IBM servers mentioning VMK (optional) and others are Fujitsu mentioning
 IPMI, iLO, RSA, iDRAC and the like.
 Alternatives are switched PDUs, like APC's AP7900. 
 
-
 ## Fencing:
 
 - https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
