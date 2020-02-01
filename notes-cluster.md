@@ -427,26 +427,47 @@ systemctl enable pacemaker
 
 ## Configure Fencing resources
 
+When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a "fence_cups01" stonith rule, calling Proxmox KVM system to make actions over "cups01.domain.tld" virtual machine:
 
-On any active node:
+
+On any active node make the stonith rules for each one:
 
 ```
-pcs stonith create fence_host01_id fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
+pcs stonith create fence_cups01 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
   login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
-  pcmk_host_list="hostname01.domain.tld" node_name="pve"
-  
-pcs constraint location fence_host01_id prefers hostname01.domain.tld
+  pcmk_host_list="cups01.domain.tld" node_name="pve"
 
-(repeat for each node)
+pcs stonith create fence_cups02 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
+  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
+  pcmk_host_list="cups02.domain.tld" node_name="pve"
 
+pcs stonith create fence_cups03 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
+  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
+  pcmk_host_list="cups03.domain.tld" node_name="pve"
+```
+
+Next, set the stonith resource to be (when possible) active in its own node. This is optional, but allows a node to call its hypervisor to shut it down, there are environments (a proxmox cluster where VM can be running in different hosts) where this si the most secure configuration to ensure sucessful stonith:
+```
+pcs constraint location fence_cups01 prefers cups01.domain.tld
+pcs constraint location fence_cups02 prefers cups02.domain.tld
+pcs constraint location fence_cups03 prefers cups03.domain.tld
+```
+
+For a node to be online it must see at least one more node, it is, needs a quorum > 1. Enable stonith in cluster, set a shut down action when quorum is not satisfied:
+
+```
 pcs property set stonith-enabled=true
 pcs property set no-quorum-policy=suicide
-pcs stonith update fence_host01_id action="off" --force
+pcs stonith update fence_cups01 action="off" --force
+pcs stonith update fence_cups02 action="off" --force
+pcs stonith update fence_cups03 action="off" --force
+```
 
+Resources and stonith actions are now completely configured. Restart all cluster services in all nodes (execute the following in each one):
+```
 systemctl enable pcsd
 systemctl enable corosync
 systemctl enable pacemaker
-
 ```
 
 Now, test the cluster fencing, disconecting one node, turning off the network interface:
@@ -461,6 +482,8 @@ Check the cluster status, when this node loose comunication with the cluster, th
 watch pcs status
 ```
 (CONTROL-C to exit)
+
+
 
 ## Links (consulted documentation):
 
