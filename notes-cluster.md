@@ -15,6 +15,7 @@ apt install fence-agents
 ## OS Preparation
 
 
+
 In all nodes (CentOS 7)
 
 
@@ -28,9 +29,9 @@ Install all needed packages:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
-    perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
+    perl-core libaio nmap-ncat libstdc++.so.6 wget vim \
+    acemaker pcs corosync resource-agents pacemaker-cli fence-agents-all
 ```
-
 
 It is important to set an FQDN hostname:
 
@@ -81,11 +82,6 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
-Install CLUSTER Software:
-
-```
-yum -y install pacemaker pcs corosync resource-agents pacemaker-cli
-```
 
 Set the "hacluster" account password in both servers:
 
@@ -197,15 +193,10 @@ systemctl enable pacemaker
 ```
 Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
 
+## Configure Fencing resources
 
 
-
-
-
-
-
-
-Create Fencing resource in cluster
+On any active node:
 
 ```
 pcs stonith create fence_host01_id fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
@@ -224,19 +215,16 @@ systemctl enable pcsd
 systemctl enable corosync
 systemctl enable pacemaker
 
-
-```
-```
-yum -y install pacemaker pcs corosync resource-agents pacemaker-cli fence-agents-all
 ```
 
-All nodes
-```
-echo "hacluster:my_password"|chpasswd <--- all nodes
-systemctl start pcsd
-systemctl status pcsd
-mkdir -p /etc/cluster
-```
+
+
+
+
+
+## Old notes
+
+
 Node 1:
 ```
 pcs cluster auth cups01.prue.ba cups02.prue.ba cups03.prue.ba
