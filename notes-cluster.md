@@ -1,6 +1,6 @@
 # Fencing Proxmox KVM host CUPS Cluster
 
-This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts with CentOS 7, running in a Proxmox Hypervisor with STONITH using fence_pve agent.
+This documentation is intended to have a full guide of how to install a CUPS service running in a corosync/pacemaker cluster. Servers are KVM hosts with CentOS 7 running in a Proxmox Hypervisor. One shared filesystem stores services common files and split brain condition will be avoided using STONITH through fence_pve agent.
 
 This is our sample IP addeses:
 
