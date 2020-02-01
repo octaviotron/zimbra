@@ -5,9 +5,9 @@ This documentation is intended to have a full guide of how to install a corosync
 This is our sample IP addeses:
 
 ```
-cups01.domain.tld   192.168.0.1
-cups02.domain.tld	192.168.0.2
-cups03.domain.tld	192.168.0.3
+cups01.domain.tld  192.168.0.1
+cups02.domain.tld  192.168.0.2
+cups03.domain.tld  192.168.0.3
 
 proxmox.domain.tld  192.168.0.254
 ```
