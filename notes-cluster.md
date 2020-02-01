@@ -30,7 +30,8 @@ Install all needed packages:
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
     perl-core libaio nmap-ncat libstdc++.so.6 wget vim \
-    acemaker pcs corosync resource-agents pacemaker-cli fence-agents-all
+    pacemaker pcs corosync resource-agents pacemaker-cli fence-agents-all \
+    git gcc make automake autoconf libtool pexpect python-requests
 ```
 
 It is important to set an FQDN hostname:
@@ -119,7 +120,6 @@ In all nodes:
 
 ```
 cd
-yum install git gcc make automake autoconf libtool pexpect python-requests
 git clone https://github.com/ClusterLabs/fence-agents.git
 cd fence-agents/
 ./autogen.sh
