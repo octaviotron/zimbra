@@ -28,9 +28,9 @@ qm set 101 -ide1 /dev/sdX
 
 Change "101" for the VM ID in proxmox and /dev/sdX for the filesystem device you want to link to VMs.
 
-## OS Preparation
+## Virtual Machines OS Preparation
 
-In this example all virtual hosts has a fresh install of CentOS 7. 
+In this example all virtual hosts are a fresh install of CentOS 7. 
 
 This are common steps needed to be executed on each node (on all of them):
 
