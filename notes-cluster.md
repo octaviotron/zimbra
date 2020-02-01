@@ -377,15 +377,26 @@ And each node do:
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/cups_ctl
 ```
 
-Now in any active node do:
+Now in any active node create cusp "svc_cups" resource:
+
 ```
 pcs resource create svc_cups ocf:heartbeat:cups_ctl op monitor interval=30s
+```
+
+Disable resource monitor to make it more independent from cluster status:
+```
 pcs resource op remove svc_cups monitor
+```
+
+Finnaly set resource order:
+```
 pcs constraint colocation add svc_cups virtual_ip INFINITY
 pcs constraint order virtual_ip then svc_cups
 ```
 
-This will create "cupsctl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated. Check it is a loades cluster resource:
+"svc_cups" now exists as cluster resource and it will be present only if virtual IP is activated. 
+
+Check if it is loaded as cluster resource:
 ```
 pcs status
 ```
