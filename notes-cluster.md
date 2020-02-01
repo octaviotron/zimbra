@@ -167,7 +167,7 @@ This will ask for a user and a password. Put "**hacluster**" as user and the pas
 Create the cluster:
 
 ```
-pcs cluster setup --name cluster_zimbra zimbra01 zimbra02
+pcs cluster setup --name cluster_cups cups03.domain.tld cups03.domain.tld cups03.domain.tld
 pcs cluster start --all
 ```
 
