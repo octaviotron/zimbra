@@ -294,12 +294,21 @@ watch pcs status
 ## NOTES
 
 The following command shows the quorum configuration.
+```
+pcs quorum
 pcs quorum [config]
 pcs quorum expected-votes 2
+```
 
-The following command shows the quorum runtime status.
+The following command shows the quorum runtime status:
+```
 pcs quorum status
+```
 
-# corosync-quorumtool 
-Quorum information 
+Quorum information:
+```
+corosync-quorumtool 
+```
+
+
 
