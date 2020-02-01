@@ -41,7 +41,7 @@ yum -y update
 yum -y upgrade
 ```
 
-Install all needed packages:
+Install all needed packages in all nodes too:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
@@ -50,7 +50,7 @@ yum -y install ipa-client unzip net-tools sysstat openssh-clients \
     git gcc make automake autoconf libtool pexpect python-requests
 ```
 
-It is important to set an FQDN hostname. In cups01 do:
+It is important to set an FQDN hostname. In cups01 node do:
 
 ```
 hostnamectl set-hostname "cups01.domain.tld" && exec bash 
@@ -67,7 +67,7 @@ And in cups03 do:
 hostnamectl set-hostname "cups03.domain.tld" && exec bash 
 ```
 
-Next, put the propper hostname and ip in /etc/hosts in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
+Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
 
 ```
 192.168.0.1    cups01.domain.tld     cups01
@@ -81,7 +81,7 @@ Disable SELinux Policies in all nodes:
 setenforce 0
 ```
 
-Then, disable it for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
+Also disable SELinux for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
 ```
 SELINUX=permissive
 ```
@@ -112,12 +112,12 @@ echo "hacluster:your_password"|chpasswd
 ```
 (change "your_password" and remember it for later)
 
-On all nodes start the cluster:
+On all nodes start cluster system service:
 ```
 systemctl start pcsd
 systemctl status pcsd
 ```
-Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay, so on all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow on all nodes:
+Corosync service has a bug in CentOS 7 which sometimes starts corosync too early when some needed system resources are not already available. To avoid this, add a 3 seconds delay before service starts, to do this, in all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "**ExecStartPre=/usr/bin/sleep 3**" after "**[service]**" section. The file must be as follow on all nodes:
 
 ```
 [Service]
@@ -125,6 +125,7 @@ ExecStartPre=/usr/bin/sleep 3
 ExecStart=/usr/share/corosync/corosync start
 ExecStop=/usr/share/corosync/corosync stop
 Type=forking
+...
 ```
 
 And in each node reload daemons after modify this file:
