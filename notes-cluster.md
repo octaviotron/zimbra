@@ -101,7 +101,7 @@ Set the "hacluster" account password in al nodes:
 ```
 echo "hacluster:your_password"|chpasswd
 ```
-(change "your_password" and put there your password)
+(change "your_password" and remember it for later)
 
 On all nodes start the cluster:
 ```
@@ -150,6 +150,10 @@ On any active node:
 ```
 pcs cluster auth cups01.domain.tld cups02.domain.tld cups03.domain.tld
 ```
+
+This will ask for a user and a password. Put "**hacluster**" as user and the password you set in previous steps.
+
+
 Create the cluster:
 
 ```
