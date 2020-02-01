@@ -126,7 +126,7 @@ systemctl daemon-reload
 
 ## Install PVE fence agent 
 
-In all nodes:
+CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
 
 ```
 cd
@@ -138,7 +138,7 @@ make && make install
 fence_pve --version
 ```
 
-Ask fence_pve from a cluster node:
+To test it, ask fence_pve from each cluster node. You will get a "STATUS: OK" message:
 ```
 /usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
 ```
@@ -229,10 +229,7 @@ Create **/usr/lib/ocf/resource.d/heartbeat/cups_ctl** file in all nodes with thi
 : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
-: ${OCF_RESKEY_binary="systemctl"}
 : ${OCF_RESKEY_cups_dir="/etc/cups"}
-: ${OCF_RESKEY_cups_user="cups"}
-: ${OCF_RESKEY_cups_group="cups"}
 USAGE="Usage: $0 {start|stop|reload|status|monitor|validate-all|meta-data}";
 
 ##########################################################################
@@ -257,7 +254,7 @@ This script manages CUPS as an OCF resource in a high-availability setup.
 <parameter name="binary" unique="0" required="0">
 <longdesc lang="en">
 Short name to the CUPS control script.
-For example, "zmcontrol" of "/etc/init.d/cupsd".
+For example, "cuspinit" of "/etc/init.d/cupsd".
 </longdesc>
 <shortdesc lang="en">
 Short name to the CUPS control script</shortdesc>
@@ -267,11 +264,11 @@ Short name to the CUPS control script</shortdesc>
 <parameter name="cups_dir" unique="1" required="0">
 <longdesc lang="en">
 Full path to CUPS directory.
-For example, "/opt/cups".
+For example, "/etc/cups".
 </longdesc>
 <shortdesc lang="en">
 Full path to CUPS directory</shortdesc>
-<content type="string" default="/opt/cups" />
+<content type="string" default="/etc/cups" />
 </parameter>
 
 <parameter name="cups_user" unique="1" required="0">
@@ -322,10 +319,7 @@ start)
 	echo "Starting CUPS Services"
 	echo "0" > /var/log/db-svc-started.log
 	rm -f /var/log/cups-svc-stopped.log
-	if [ -f /etc/init.d/cupsd ]
-	then
-		/etc/init.d/cupsd start
-	fi
+	systemctl start cups
 	ocf_log info "CUPS started."
 	exit $OCF_SUCCESS
 	;;
@@ -333,11 +327,8 @@ stop)
 	echo "Stopping CUPS Services"
 	rm -f /var/log/db-svc-started.log
 	echo "0" > /var/log/cups-svc-stopped.log
-	if [ -f /etc/init.d/cupsd ]
-	then
-		/etc/init.d/cupsd stop
-		/bin/killall -9 -u cups
-	fi
+	systemctl stop cups
+	/bin/killall -9 -u cups
 	ocf_log info "CUPS stopped."
 	exit $OCF_SUCCESS
 	;;
@@ -353,12 +344,9 @@ status|monitor)
 restart|reload)
 	echo "CUPS Services Restart"
 	ocf_log info "Reloading CUPS."
-	if [ -f /etc/init.d/cupsd ]
-	then
-		/etc/init.d/cupsd stop
-		/bin/killall -9 -u cups
-		/etc/init.d/cupsd start
-	fi
+	systemctl stop cups
+	/bin/killall -9 -u cups
+	systemctl start cups
 	exit $OCF_SUCCESS
 	;;
 validate-all)
