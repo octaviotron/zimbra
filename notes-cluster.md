@@ -80,7 +80,7 @@ firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,
 firewall-cmd --reload
 ```
 
-It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this:
+It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this in all nodes:
 
 ```
 systemctl stop firewalld
@@ -94,7 +94,7 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
-Set the "hacluster" account password in both servers:
+Set the "hacluster" account password in al nodes:
 
 ```
 echo "hacluster:your_password"|chpasswd
@@ -102,7 +102,7 @@ echo "hacluster:your_password"|chpasswd
 
 (change "your_password" and put there your password)
 
-On both zimbra01 (active server) and zimbra02 (passive server) start cluster:
+On all nodes start the cluster:
 ```
 systemctl start pcsd
 systemctl status pcsd
@@ -226,9 +226,18 @@ systemctl enable pacemaker
 
 ```
 
+Now, test the cluster fencing, disconecting one node, turning off the network interface:
 
+```
+systemctl stop networking
+```
 
+Check the cluster status, when this node loose comunication with the cluster, the fencing agent will send a signal to VM hypervisor and a STOINITH will be done over this absent node. You can watch the process seeing happening changes:
 
+```
+watch pcs status
+```
+(CONTROL-C to exit)
 
 
 ## Old notes
