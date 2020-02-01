@@ -1,9 +1,126 @@
-On hypervisor:
+# HA Cluster in GNU/Linux
+
+This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts.
+```
+cups01.domain.tld 	192.168.0.1
+cups02.domain.tld	  192.168.0.2
+cups03.domain.tld	  192.168.0.3
+```
+
+## On hypervisor:
 ```
 apt install fence-agents
 ```
 
-On nodes:
+## OS Preparation
+
+
+In all nodes (CentOS 7)
+
+
+```
+rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
+yum -y update
+```
+
+Install all needed packages:
+
+```
+yum -y install ipa-client unzip net-tools sysstat openssh-clients \
+    perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
+```
+
+
+It is important to set an FQDN hostname:
+
+```
+hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
+```
+
+Next, put the propper hostname and ip in /etc/hosts and the other nodes as well:
+
+```
+192.168.0.1    cups01.domain.tld     cups01
+192.168.0.2    cups02.domain.tld     cups02
+192.168.0.3    cups03.domain.tld     cups03
+```
+
+Disable SELinux Policies in all systems:
+
+First, disable SELinux in the current running system:
+
+```
+setenforce 0
+```
+
+Then, disable it in the next boot, changing the following line in /etc/selinux/config
+```
+SELINUX=permissive
+```
+
+
+Enable prots in Firewall:
+
+```
+firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
+firewall-cmd --reload
+```
+
+It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this:
+
+```
+systemctl stop firewalld
+systemctl disable firewalld
+```
+
+Remember when you finnish all processes to enable it again:
+
+```
+systemctl start firewalld
+systemctl enable firewalld
+```
+
+Install CLUSTER Software:
+
+```
+yum -y install pacemaker pcs corosync resource-agents pacemaker-cli
+```
+
+Set the "hacluster" account password in both servers:
+
+```
+echo "hacluster:your_password"|chpasswd
+```
+
+(change "your_password" and put there your password)
+
+On both zimbra01 (active server) and zimbra02 (passive server) start cluster:
+```
+systemctl start pcsd
+systemctl status pcsd
+```
+
+On all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow:
+
+```
+[Service]
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=/usr/share/corosync/corosync start
+ExecStop=/usr/share/corosync/corosync stop
+Type=forking
+```
+
+And in each node reload daemons after modify this file:
+
+```
+systemctl daemon-reload
+```
+
+## Install PVE fence agent 
+
+In all nodes:
+
 ```
 cd
 yum install git gcc make automake autoconf libtool pexpect python-requests
@@ -19,6 +136,74 @@ Ask fence_pve from a cluster node:
 ```
 /usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
 ```
+
+## Create cluster resources
+
+
+On any active node:
+```
+pcs cluster auth cups01.domain.tld cups02.domain.tld cups03.domain.tld
+```
+Create the cluster:
+
+```
+pcs cluster setup --name cluster_zimbra zimbra01 zimbra02
+pcs cluster start --all
+```
+
+Check cluster status:
+
+```
+pcs status cluster
+corosync-cmapctl | grep members
+pcs status corosync
+```
+
+Disable stonith. It is temporary, needed to configure and activated later:
+```
+pcs property set stonith-enabled=false
+```
+
+And disable the quorum policy, also later will be reactivated:
+
+```
+pcs property set no-quorum-policy=ignore
+pcs property
+```
+
+Now, create the VIRTUAL IP resource:
+```
+pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.254 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
+```
+
+We are using "eth0" here to create "eth0:0" alias. Please verify your network interface is this or rename as needed.
+
+Verify the creation of the virtual IP:
+```
+pcs status resources
+```
+
+You will get a message with a line like this:
+```
+virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
+```
+
+On both zimbra01 (active server) and zimbra02 (passive server) enable services:
+
+```
+systemctl enable pcsd
+systemctl enable corosync
+systemctl enable pacemaker
+```
+Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
+
+
+
+
+
+
+
+
 
 Create Fencing resource in cluster
 
