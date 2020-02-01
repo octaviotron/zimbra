@@ -97,8 +97,7 @@ On both zimbra01 (active server) and zimbra02 (passive server) start cluster:
 systemctl start pcsd
 systemctl status pcsd
 ```
-
-On all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow:
+Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay, so on all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow on all nodes:
 
 ```
 [Service]
@@ -184,14 +183,14 @@ You will get a message with a line like this:
 virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
 ```
 
-On both zimbra01 (active server) and zimbra02 (passive server) enable services:
+On each node enable services:
 
 ```
 systemctl enable pcsd
 systemctl enable corosync
 systemctl enable pacemaker
 ```
-Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
+
 
 ## Configure Fencing resources
 
