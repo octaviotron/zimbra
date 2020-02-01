@@ -1,6 +1,6 @@
 # Fencing Proxmox Virtual KVM hosts Cluster
 
-This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts with CentOS 7, running in a Proxmox Hypervisor with STONITH.
+This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster of KVM hosts with CentOS 7, running in a Proxmox Hypervisor with STONITH using fence_pve agent.
 
 This is our sample IP addeses:
 
