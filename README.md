@@ -250,7 +250,7 @@ systemctl enable pacemaker
 ```
 Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
 
-On both zimbra01 (active server) and zimbra02 (passive server) modify /usr/lib/systemd/system/corosync.service file adding "ExecStartPre=/usr/bin/sleep 10" after "[service]" line. The file section must be as follow:
+On both zimbra01 (active server) and zimbra02 (passive server) modify /usr/lib/systemd/system/corosync.service file adding "ExecStartPre=/usr/bin/sleep 3" after "[service]" line. The file section must be as follow:
 
 ```
 [Service]
