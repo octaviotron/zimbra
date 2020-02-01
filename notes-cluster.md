@@ -12,12 +12,21 @@ cups03.domain.tld  192.168.0.3
 proxmox.domain.tld  192.168.0.254
 ```
 
-## Install Fence Agents On Proxmox KVM host:
+## Prepare Proxmox OS
 
-This is needed to be done on the KVM hypervisor Operating Sistem (in a root console in Proxmox host):
+Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating Sistem (in a root console in Proxmox host):
 ```
 apt install fence-agents
 ```
+
+Also, you need to add a shared storage resource enabled as a device for each virtual host you are going to configure as cluster. If the web UI does not let to make this, you will need to add it manually:
+
+```
+cd /etc/pve/qemu-server/
+qm set 101 -ide1 /dev/sdX
+```
+
+Change "101" for the VM ID in proxmox and /dev/sdX for the filesystem device you want to link to VMs.
 
 ## OS Preparation
 
