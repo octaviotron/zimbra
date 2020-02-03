@@ -1,208 +1,209 @@
-# Zimbra Community Suite Cluster with Fencing in Proxmox KVM hosts
+# Proxied Zimbra Cluster
 
-This documentation is intended to have a full guide of how to install Zimbra (8.8.15 LTS) in a corosync/pacemaker Proxmox KVM cluster with Stonith and Fencing.
+**Zimbra 8.8 (ZCS) in active-passive cluster, with multiple Proxy Servers and external LDAP (FreeIPA) accounts provisioning**
 
+This documentation is intended to have a full guide of how to install a corosync/pacemaker cluster with Zimbra Community Suite (8.8.15 LTS) and many Zimbra-Proxy Servers, with external LDAP provisioning (FreeIPA in this case). Cluster Nodes are going to be installed into Proxmox KVM hosts.
 
-The entire schema is as following image:
-
-
-This is our sample IP addeses:
-
-```
-mbox01.domain.tld  192.168.0.1
-mbox02.domain.tld  192.168.0.2
-mbox03.domain.tld  192.168.0.3
-mbox.domain.tld    192.168.0.4  <--- mbox cluster virtual ip
-proxy01.domin.tld  192.168.0.5
-proxy02.domin.tld  192.168.0.6
-proxy03.domin.tld  192.168.0.7
-mail.domian.tld    192.168.0.8  <--- proxy round-robin virtual ip
-
-proxmox.domain.tld 192.168.0.10 <--- Proxmox KVM host
-
+Theese are the hostnames and IPs we will use:
 ```
 
-## Prepare Proxmox OS
+zimbra01.domain.tld 	192.168.0.1	(Cluster Node Zimbra Server)
+zimbra02.domain.tld	192.168.0.2	(Cluster Node Zimbra Server)
+zimbra03.domain.tld	192.168.0.3	(Cluster Node Zimbra Server)
 
-Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating System. In a root console in Proxmox host do:
+mail.domain.tld		192.168.0.10    (virtual IP for cluster)
+
+proxy1.domain.tld 	192.168.0.11	(first zimbra-proxy server)
+proxy2.domain.tld 	192.168.0.12	(second zimbra-proxy server)
+
+hypervisor.domain.tld	192.168.0.100 	(Proxmox KVM hypervisor)
+freeipa.domain.tld	192.168.0.254	(FreeIPA server)
+
 ```
-apt install fence-agents
+
+Zimbra01-03 are the mailbox nodes we are going to install into a corosync/pacemaker HA cluster, with a virtual IP as "mail" hostname, and in this example we eill use 2 proxies, but it can be theorical unlimited ones.
+
+Hardware Requirements for Zimbra Servers:
+
+- 3 KVM hosts with 8+ CPU cores, 16+GB RAM and 20+GB Free Space
+- SAN/NAS storage for mailboxes in cluster servers with about 1TB of free space (depending on your traffic)
+
+## DNS MX record
+
+It is necessary to have DNS records giving propper answers to MX requests. In this example FreeIPA is used as DNS and LDAP services, so in any enrolled machine do:
+
+```
+kinit admin
+ipa dnsrecord-add domain.tld @ --mx-rec="0 mail.domain.tld."
 ```
 
-Also, you need to add a shared SAN/NAS storage resource enabled as a device for each virtual host you are going to configure as cluster. If the web UI does not let to make this, you will need to add it manually:
+If you are not using FreeIPA just ensure MX has propper answers, 
+
+To verify MX record, ask the DNS:
 
 ```
-cd /etc/pve/qemu-server/
-qm set 101 -ide1 /dev/sdX
+dig @freeipa.domain.tld domain.tld mx
 ```
 
-Change "101" for the VM ID in proxmox and /dev/sdX for the SAN/NAS device you want to link to VMs.
+## Common Process (for all servers)
 
-## MBOX Cluster Virtual Machines OS Preparation
+This are the needed steps for installing all zimbra nodes (both mailboxex, proxies needs different approach):
 
-The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts.
-
-In this example all virtual hosts are a fresh-new install of CentOS 7, with only base packages. 
-
-This are common steps needed to be executed on each node (on all of them):
+First, install Centos 7 with support for English and your native language (if any) and update all your systems: 
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 yum -y update
-yum -y upgrade
+
 ```
 
-Install needed packages in all nodes too:
+Install all needed packages:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
-    perl-core libaio nmap-ncat libstdc++.so.6 wget vim \
-    pacemaker pcs corosync resource-agents pacemaker-cli fence-agents-all \
-    git gcc make automake autoconf libtool pexpect python-requests
+    perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
 ```
 
-It is important to set an FQDN hostname. In mbox01 node do:
+It is important to set an FQDN hostname:
 
 ```
-hostnamectl set-hostname "mbox01.domain.tld" && exec bash 
+hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
 ```
 
-In mbox02 do:
+Next, put the propper hostname and ip in /etc/hosts
 
 ```
-hostnamectl set-hostname "mbox02.domain.tld" && exec bash 
+192.168.0.1     mail.domain.tld     mail
 ```
 
-And in mbox03 do:
+Disable SELinux Policies in all systems:
 
-```
-hostnamectl set-hostname "mbox03.domain.tld" && exec bash 
-```
+First, disable SELinux in the current running system:
 
-Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
-
-```
-192.168.0.1    mbox01.domain.tld     mbox01
-192.168.0.2    mbox02.domain.tld     mbox02
-192.168.0.3    mbox03.domain.tld     mbox03
-192.168.0.4	   mbox.domain.tld		 mbox
-192.168.0.5    proxy01.domin.tld	 proxy01
-192.168.0.6    proxy02.domin.tld     proxy02
-192.168.0.7    proxy03.domin.tld     proxy03
-192.168.0.8    mail.domian.tld       mail
-192.168.0.10   proxmox.domain.tld    proxmox
-```
-
-
-Disable SELinux Policies in all nodes:
 ```
 setenforce 0
 ```
 
-Also disable SELinux for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
+Then, disable it in the next boot, changing the following line in /etc/selinux/config
 ```
 SELINUX=permissive
 ```
 
+OPTIONAL: If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
+
+```
+ipa-client-install --enable-dns-updates
+```
+
+
+Disable postfix: 
+
+By default CentOS has a postfix running service. It will be needed to disable in order to make IP 25/tcp port available.
+
+```
+systemctl stop postfix
+systemctl disable postfix
+```
+
 Enable prots in Firewall:
+
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
 ```
 
-It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this in all nodes:
+It is possible you need some other ports, depending services you want to have in Zimbra Server. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this:
 
 ```
 systemctl stop firewalld
 systemctl disable firewalld
 ```
 
-Remember later when you finnish to enable it again:
+Remember when you finnish all processes to enable it again:
+
 ```
 systemctl start firewalld
 systemctl enable firewalld
 ```
 
-Set the "hacluster" account password in al nodes:
+Zimbra will use RSYSLOG for zimbra-logger so it is needed to do this for gettin it to work (in both cluster nodes):
+
+In /etc/sysconfig/rsyslog file, modify the options values:
+```
+SYSLOGD_OPTIONS="-r -m 0"
+```
+
+And in /etc/rsyslog.conf, uncomment the following lines to allow remote logs:
+```
+$ModLoad imudp
+$UDPServerRun 514
+
+$ModLoad imtcp
+$InputTCPServerRun 514
+```
+
+Finally, reload the daemon:
+```
+systemctl restart rsyslog
+```
+
+Remember to do this **IN BOTH** zimbra01 and zimbra02 servers.
+
+
+At this point, you will need to have SAN/NAS storage resource mounted on **/opt/zimbra** in both nodes, Otherwise cluser will not work when passive server takes requests from your clients when master server fails.
+
+If you don't have SAN/NAS you can use a dedicaed RAID partition for this. On PROXMOX VMs, you can do (on hypervisor host):
+
+```
+cd /etc/pve/qemu-server/
+qm set 101 -ide1 /dev/sdX <---- change sdX for the right one
+```
+
+This will add /dev/sdX to 101 VM id. of course you will need to mount it, into the VM do:
+
+```
+mount /dev/sdX /opt/zimbra
+```
+
+
+## Installing CLUSTER Software
+
+On both zimbra01 (active server) and zimbra02 (passive server) install cluster packages:
+
+```
+yum -y install pacemaker pcs corosync resource-agents pacemaker-cli
+```
+
+Set the "hacluster" account password in both servers:
 
 ```
 echo "hacluster:your_password"|chpasswd
 ```
-(change "your_password" and remember it for later)
 
-On all nodes start cluster system service:
+(change "your_password" and put there your password)
+
+On both zimbra01 (active server) and zimbra02 (passive server) start cluster:
 ```
 systemctl start pcsd
 systemctl status pcsd
 ```
-Corosync service has a bug in CentOS 7 which sometimes starts corosync too early when some needed system resources are not already available. To avoid this, add a 3 seconds delay before service starts, to do this, in all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "**ExecStartPre=/usr/bin/sleep 3**" after "**[service]**" section. The file must be as follow on all nodes:
 
+On both zimbra01 (active server) and zimbra02 (passive server) authorize nodes:
 ```
-[Service]
-ExecStartPre=/usr/bin/sleep 3
-ExecStart=/usr/share/corosync/corosync start
-ExecStop=/usr/share/corosync/corosync stop
-Type=forking
-...
+pcs cluster auth zimbra01 zimbra02
 ```
 
-And in each node reload daemons after modify this file:
+The following steps must be done only in the MASTER (active) node (zimbra01.domain.tld)
+
+Create the cluster:
 
 ```
-systemctl daemon-reload
-```
-
-## Install PVE fence agent 
-
-CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
-
-```
-cd
-git clone https://github.com/ClusterLabs/fence-agents.git
-cd fence-agents/
-./autogen.sh
-./configure --with-agents=pve
-make && make install
-fence_pve --version
-```
-
-To test it, ask fence_pve from each cluster node:
-```
-/usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
-```
-
-Change <proxmox_ip> for the KVM Hypervisor address (192.168.0.10 in the example), leave "root@pam" without changes, put root Proxmox host password in <proxmox_passowrd> and set in <vm_id> the unique VM ID, for example:
-```
-/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="ThisIsMyPasswd" --plug=101 --action=status
-```
-
-You will get a "STATUS: OK" message if everything is ok.
-
-
-## Create MBOX cluster
-
-
-On any active node make auth keys share between nodes:
-```
-pcs cluster auth mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
-```
-
-This will ask for a user and a password. Put "**hacluster**" as user and the password you set in previous steps.
-
-
-Set a name for the cluster:
-
-```
-pcs cluster setup --name cluster_cups mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
-```
-
-Start the cluster:
-```
+pcs cluster setup --name cluster_zimbra zimbra01 zimbra02
 pcs cluster start --all
 ```
 
-To check cluster status you can see the output of this commands:
+Check cluster status:
 
 ```
 pcs status cluster
@@ -210,23 +211,22 @@ corosync-cmapctl | grep members
 pcs status corosync
 ```
 
-Disable stonith. It is temporary, needed to configure and will be activated later:
+Verify the config state and disable stonith:
 ```
 pcs property set stonith-enabled=false
+crm_verify -L -V
 ```
 
-And disable the quorum policy, also later it will be activated:
+And disable the quorum policy, as there are only two nodes:
 
 ```
 pcs property set no-quorum-policy=ignore
 pcs property
 ```
 
-## Create cluster Virtual IP resource
-
-Now, create a VIRTUAL IP resource:
+Now, create the VIRTUAL IP resource:
 ```
-pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.4 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
+pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.254 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
 ```
 
 We are using "eth0" here to create "eth0:0" alias. Please verify your network interface is this or rename as needed.
@@ -238,16 +238,35 @@ pcs status resources
 
 You will get a message with a line like this:
 ```
-virtual_ip     (ocf::heartbeat:IPaddr2):       Started mbox01.domain.tls
+virtual_ip     (ocf::heartbeat:IPaddr2):       Started instance-172-16-70-51
 ```
 
-This tells cups01 host has the virtual ip assigned. you can ping and open a SSH session to verify it.
+On both zimbra01 (active server) and zimbra02 (passive server) enable services:
 
+```
+systemctl enable pcsd
+systemctl enable corosync
+systemctl enable pacemaker
+```
+Corosync service has a bug in CentOS 7, so to avoid id is needed to add a 3 seconds delay:
 
-# Create cluster CUPS daemon control resource
+On both zimbra01 (active server) and zimbra02 (passive server) modify /usr/lib/systemd/system/corosync.service file adding "ExecStartPre=/usr/bin/sleep 3" after "[service]" line. The file section must be as follow:
 
-Create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
+```
+[Service]
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=/usr/share/corosync/corosync start
+ExecStop=/usr/share/corosync/corosync stop
+Type=forking
+```
 
+On both zimbra01 (active server) and zimbra02 (passive server) reload daemons after save this file:
+
+```
+systemctl daemon-reload
+```
+
+Now create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
 
 ```bash
 #!/bin/sh
@@ -428,18 +447,13 @@ And give 755 permission:
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Copy to the other nodes:
+Coy to the other nodes and make the same:
 ```
-scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
-scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox03.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
-```
-
-And in each node do:
-```
+scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@zimbra02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Create "zimbractl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated:
+Now in one of the nodes do:
 ```
 pcs resource create svczimbra ocf:heartbeat:zimbractl op monitor interval=30s
 pcs resource op remove svczimbra monitor
@@ -447,16 +461,13 @@ pcs constraint colocation add svczimbra virtual_ip INFINITY
 pcs constraint order virtual_ip then svczimbra
 ```
 
-Check if it is loaded and active as a cluster resource:
+This will create "zimbractl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated. Check it is a loades cluster resource:
 
 ```
 pcs status
 ```
 
-
-# Create shared filesystem resource
-
-Next step makes **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the active cluster node. Do it in only one online cluster node:
+Next step makes **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the master node:
 
 ```
 cd /
@@ -467,27 +478,17 @@ pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
 ```
 
-And on each node enable services:
-
-```
-systemctl enable pcsd
-systemctl enable corosync
-systemctl enable pacemaker
-```
-
-## Installing Zimbra
-
-Zimbra Community Suite is not intended to work as a cluster. There is no any official documentation with guidelines to do that. So, we need to make a hack: we are going to install ZCS as usually, in the normal way in the first cluster node. It will set the Operating Systen environment (users, permissions, etc) and in /opt/zimbra will be all services files. Well... in the other two nodes we will make the same, but ignoring all /opt/zimbra stuff, because we will use only first one (using SAN/NAS storage)
+## Installing first node (zimbra01.domain.tld)
 
 
 It is needed to make temporary the address resolution of "**mail.domain.tld**" to point to this server, so change /etc/hosts line to:
 
 
 ```
-127.0.0.1	mail.domain.tld mail 
+192.168.0.254	mail.domain.tld mail 
 ```
 
-And remember having /opt/zimbra as a mountpoint to your NAS or SAN storage:
+And remember having /opt/zimbra as a mountpoint to your NAS or SAN storage (or a local RAID connected to both nodes)
 
 Download and Install the Software:
 
@@ -515,14 +516,13 @@ The instaler will ask you several questions, choose the following options:
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
+  Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
   Install zimbra-chat [Y]
   The system will be modified.  Continue? [N] Y
 ```
 
 Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
-
 
 Fix CA paths:
 
@@ -531,7 +531,6 @@ mkdir -p /opt/zimbra/java/jre/lib/security/
 ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cacerts
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
-
 
 Then run the installer configuration:
 
@@ -585,16 +584,20 @@ scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
 
 Now, delete "**mail.domain.tld**" line in /etc/hosts
 
-## Install the mbox02 and mbox03 nodes
-
-**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
-
 ```
-pcs cluster stop mbox02.domain.tld
-pcs cluster stop mbox03.domain.tld
+hostnamectl set-hostname "zimbra01.domain.tld" && exec bash 
 ```
 
-Now, in each node, if you do:
+
+## Install the SECOND node
+
+**WARNING:** This procedure MUST be done with zimbra02 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
+
+```
+pcs cluster stop zimbra02.domain.tld
+```
+
+Now, in zimbra02, if you do:
 
 ```
 pcs status
@@ -606,7 +609,22 @@ You will get a message like this:
 Error: cluster is not currently running on this node
 ```
 
-In the **offline** nodes (mbox02 and mbox03) It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
+And in zimbra01 "pcs status" command MUST get you something like this:
+
+```
+Online: [ zimbra01.domain.tld ]
+OFFLINE: [ zimbra02.domain.tld ]
+
+Full list of resources:
+
+virtual_ip	(ocf::heartbeat:IPaddr2):	Started zimbra01.domain.tld
+svczimbra	(ocf::heartbeat:zimbractl):	Started zimbra01.domain.tld
+zimbra_fs	(ocf::heartbeat:Filesystem):	Started zimbra01.domain.tld
+```
+
+In the second server (zimbra02):
+
+It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
 
 ```
 mkdir /opt/zimbra
@@ -632,7 +650,7 @@ Follow the instaler questions with the same options, make sure they are the same
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
+  Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
   Install zimbra-chat [Y] 
   The system will be modified.  Continue? [N] Y
@@ -667,10 +685,10 @@ And delete the /etc/hosts line with "**mail.domain.tld**" definition
 Now, restore cluster in zimbra02:
 
 ```
-pcs cluster start mbox02.domain.tld
+pcs cluster start zimbra02.domain.tld
 ```
 
-So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) mbox01 will pass all services to mbox02 or mbx03 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
+So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) zimbra01 will pass all services to zimbra02 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
 
 ```
 watch pcs status
@@ -718,87 +736,26 @@ zmprov md prue.ba zimbraAutoProvNotificationSubject "New account auto provisione
 ```
 Remember to change "cn=accounts,dc=domain,dc=tld", (uid=%u)" and "ldap://freeipa.domain.tld:389" accornding to your needs, and put exactly the same you give in dialog wizard.
 
-You have now configured a Zimbra Server with external LDAP accounts. Cheers.
+That is ! you have configured a Zimbra Server with external LDAP accounts
 
-## Configure Fencing resources
+## Install Zimbra Proxy Server
 
-When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a stonith rule for each node, calling Proxmox KVM system to make actions over any failing virtual machine:
-
-
-On any active node make the stonith rules for each one:
+Install all needed packages:
 
 ```
-pcs stonith create fence_mboxs01 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
-  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
-  pcmk_host_list="mbox01.domain.tld" node_name="pve"
-
-pcs stonith create fence_mbox02 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
-  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
-  pcmk_host_list="mbox02.domain.tld" node_name="pve"
-
-pcs stonith create fence_mbox03 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
-  login="root@pam" passwd=<proxmox_passwd> delay="15" port=<vm_id> pcmk_host_check=static-list \
-  pcmk_host_list="mbox03.domain.tld" node_name="pve"
+yum -y install ipa-client unzip net-tools sysstat openssh-clients perl-core libaio nmap-ncat libstdc++.so.6 wget vim 
 ```
 
-Next, set the stonith resource to be (when possible) active in its own node. This is optional, but allows a node to call its hypervisor to shut it down, there are environments (a proxmox cluster where VM can be running in different hosts) where this si the most secure configuration to ensure sucessful stonith:
-```
-pcs constraint location fence_mbox01 prefers mbox01.domain.tld
-pcs constraint location fence_mbox02 prefers mbox02.domain.tld
-pcs constraint location fence_mbox03 prefers mbox03.domain.tld
-```
-
-For a node to be online it must see at least one more node, it is, needs a quorum > 1. Enable stonith in cluster, set a shut down action when quorum is not satisfied:
-
-```
-pcs property set stonith-enabled=true
-pcs property set no-quorum-policy=suicide
-pcs stonith update fence_mbox01 action="off" --force
-pcs stonith update fence_mbox02 action="off" --force
-pcs stonith update fence_mbox03 action="off" --force
-```
-
-Resources and stonith actions are now completely configured. Restart all cluster services in all nodes (execute the following in each one):
-```
-systemctl enable pcsd
-systemctl enable corosync
-systemctl enable pacemaker
-```
-
-Now, test the cluster fencing, disconecting one node, turning off the network interface:
-
-```
-systemctl stop networking
-```
-
-Check the cluster status, when this node loose comunication with the cluster, the fencing agent will send a signal to VM hypervisor and a STOINITH will be done over this absent node. You can watch the process seeing happening changes:
-
-```
-watch pcs status
-```
-(CONTROL-C to exit)
-
-
-## Install Zimbra Proxy Servers
-
-First, set FQDN hostname for each node, i.e:
+It is important to set an FQDN hostname:
 
 ```
 hostnamectl set-hostname "proxy01.domain.tld" && exec bash 
 ```
 
-Next, verify the propper hostname and ip in /etc/hosts as well as others nodes:
+Next, put the propper hostname and ip in /etc/hosts
 
 ```
-192.168.0.1    mbox01.domain.tld     mbox01
-192.168.0.2    mbox02.domain.tld     mbox02
-192.168.0.3    mbox03.domain.tld     mbox03
-192.168.0.4    mbox.domain.tld       mbox
-192.168.0.5    proxy01.domin.tld     proxy01
-192.168.0.6    proxy02.domin.tld     proxy02
-192.168.0.7    proxy03.domin.tld     proxy03
-192.168.0.8    mail.domian.tld       mail
-192.168.0.10   proxmox.domain.tld    proxmox
+192.168.0.4     proxy01.domain.tld     proxy01
 ```
 
 If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
@@ -823,7 +780,7 @@ Then, disable it in the next boot, changing the following line in /etc/selinux/c
 SELINUX=permissive
 ```
 
-Now run the installer (with -s option) and ONLY select zimbra-proxy option:
+Now run the installer (with -s option):
 
 ```
 ./install.sh -s
@@ -896,6 +853,7 @@ su - zimbra
 exit;
 ```
 
+
 Then, when done, in both servers do also:
 ```
 /opt/zimbra/libexec/zmsyslogsetup
@@ -915,42 +873,80 @@ mail.*                  @mail.prue.ba
 
 This is a bug fix: all logs comes in a loop when the server sends their messages "remotely to himself". If you skip this step, you will go empty of space in local disk as soon as the filesystem speed allows it.
 
+## Final words
 
 
-## Links (consulted documentation):
 
-- https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
-- https://access.redhat.com/solutions/293183
-- https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
-- Proxmox: servicio fence_virtd https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
-- Proxmox: agente fence_virsh https://linux.die.net/man/8/fence_virsh
-- CentOS VMs: agente fence_xvm https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
-- KVM fencing: https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
-- Fencing Pacemaker: https://www.unixarena.com/2016/01/rhel-7-configure-fencing-pacemaker.html/
-- How to configure Red Hat Cluster with fencing of two KVM guests running on two different KVM hosts https://access.redhat.com/solutions/293183 
-- https://icicimov.github.io/blog/virtualization/Pacemaker-VM-cluster-fencing-in-Proxmox-with-fence-pve/
-- https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
-- https://www.epilis.gr/en/blog/2018/07/02/fencing-linux-vm-cluster/
-- https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
+## Links (used to write this document)
 
-## NOTES
+* Zimbra Installation Guide: https://zimbra.github.io/installguides/8.8.12/multi.html       
+* Zimbra Admin Guide: https://zimbra.github.io/adminguide/8.8.15/adminguide-8.8.15.pdf
+* zmprov attributes: https://wiki.zimbra.com/wiki/How_to_get_details_of_zmprov_attributes/zmlocalconfig_attributes
+* Recipe: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
 
-The following command shows the quorum configuration.
+Other likns:
+
+* https://www.zimbra.com/docs/ne/8.6.0/multi_server_install/wwhelp/wwhimpl/js/html/wwhelp.htm#href=multi_server_install.Multiple-Server_Installation.html
+* https://zimbra.github.io/installguides/8.8.9/multi.html
+* https://www.zimbra.com/docs/os/5.0.0/administration_guide/3_Zimbra%20Servers.4.1.html
+* https://wiki.zimbra.com/wiki/Open_Source_Edition_Backup_Procedure
+* https://wiki.zimbra.com/wiki/How_to_configure_autoprovisioning_with_external_LDAP
+* https://linoxide.com/linux-how-to/howto-install-configure-zimbra-8-6-multi-server-centos-7/
+* https://computingforgeeks.com/zimbra-multi-server-installation-on-centos-7/
+* https://www.zimbra.com/docs/ne/4.0.5/multi_server_install/clustering.7.1.html#1066634
+BACKUP: https://forums.zimbra.org/viewtopic.php?t=65435
+	https://wiki.zimbra.com/wiki/Zimbra_DR_Strategy
+DKIM: https://wiki.zimbra.com/wiki/Best_Practices_on_Email_Protection:_SPF,_DKIM_and_DMARC
+Zimbra Desktop: https://wiki.zimbra.com/wiki/Installing_Zimbra_Desktop_on_64bit_Linux
+		https://computingforgeeks.com/how-to-install-zimbra-desktop-on-ubuntu-18-04-bionic-beaver/
+PROXY:	https://wiki.zimbra.com/wiki/Zimbra_Proxy_Guide
+LOGS: https://wiki.zimbra.com/wiki/Using_log4j_to_Configure_mailboxd_Logging
+
+
+# Notes (used for testing purposes)
+
+How to get config parameter using zmprov:
 ```
-pcs quorum
-pcs quorum [config]
-pcs quorum expected-votes 2
+zmprov gcf [parameter]
 ```
 
-The following command shows the quorum runtime status:
+How to disable TLS in LDAP:
 ```
-pcs quorum status
+zmlocalconfig -e ssl_allow_untrusted_certs=true 
+zmlocalconfig -e ldap_starttls_supported=0
+zmlocalconfig -e ldap_starttls_required=false
+zmlocalconfig -e ldap_common_require_tls=0
+zmcontrol restart
 ```
 
-Quorum information:
+Howto configure OpenDKIM service:
+
+Open a root console in Zimbra server and put the following commands:
 ```
-corosync-quorumtool 
+/opt/zimbra/libexec/zmdkimkeyutil -a -d domain.tld
+
+35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey	IN	TXT	( "v=DKIM1; k=rsa; " "p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCm"
+	  "i4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB" )  ; ----- DKIM key 35BC9092-38DA-11EA-965D-1D43A6F2AEB9 for prue.ba
+
+Register: 35BC9092-38DA-11EA-965D-1D43A6F2AEB9._domainkey
+Type: TXT
+Value: v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1nSZ6IAfTfZVjvcYgAd0lZpIupoxuMpEmT/2+QedgukuUBVP9kYLVVI0cUxpnXDgtKpRPNhQtVAATn2KFGySABIx3Jin8EU3/FSYGYMQM9BKzTjM3HfueFIJFF5kzmd5FgLgHHOY2C6EPMWI/GFBpDs3QrcA9J/7HCgqYESA9DmT+9JhsnLeVaj2/3X09xfSPHv/A8Avp74aCmi4h0LplL3TeCpWTti2nQgkWdTNsj3Oh0EICHEupLkv0bAB5CiSeXTqPkMQ/lGdr2F6T9l5sb1jISVRiWbOhzaN1A5HDDBcU3v2Tb/LToyKi937BdPysKh3+QFP4jdcKpvcf+/CnQIDAQAB
+```
+To change "mynetworks in zimbra postfix:
+```
+zmprov ms mail.domain.tld zimbraMtaMyNetworks "127.0.0.0/8 10.0.0.0/24 [::1]/128 [fe80::]/64"
 ```
 
 
+How to change buggy chat zimlet:
 
+```
+zmzimletctl disable com_zextras_chat_open
+zmzimletctl undeploy com_zextras_chat_open
+zmprov fc all
+zmmailboxdctl restart
+# yum install zimbra-chat
+zmprov fc all
+zmmailboxdctl restart
+```
+See https://wiki.zimbra.com/wiki/Using_zmstat-chart_to_generate_statistics
