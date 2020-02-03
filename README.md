@@ -245,7 +245,7 @@ virtual_ip     (ocf::heartbeat:IPaddr2):       Started mbox01.domain.tls
 This tells cups01 host has the virtual ip assigned. you can ping and open a SSH session to verify it.
 
 
-# Create cluster CUPS daemon control resource
+# Create ZIMBRA cluster daemon control resource
 
 Create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
 
