@@ -953,5 +953,17 @@ Quorum information:
 corosync-quorumtool 
 ```
 
+How to change buggy chat zimlet:
+
+```
+zmzimletctl disable com_zextras_chat_open
+zmzimletctl undeploy com_zextras_chat_open
+zmprov fc all
+zmmailboxdctl restart
+# yum install zimbra-chat
+zmprov fc all
+zmmailboxdctl restart
+```
+
 
 
