@@ -4,7 +4,7 @@ This documentation is intended to have a full guide of how to install Zimbra (8.
 
 
 The entire schema is as following image:
-
+![diagrama](imgs/Diagrama2.png)
 
 This is our sample IP addeses:
 
