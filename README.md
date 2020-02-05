@@ -774,11 +774,11 @@ pcs constraint location fence_mbox03 prefers mbox03.domain.tld
 For a node to be online it must see at least one more node, it is, needs a quorum > 1. Enable stonith in cluster, set a shut down action when quorum is not satisfied:
 
 ```
-pcs property set stonith-enabled=true
-pcs property set no-quorum-policy=suicide
 pcs stonith update fence_mbox01 action="off" --force
 pcs stonith update fence_mbox02 action="off" --force
 pcs stonith update fence_mbox03 action="off" --force
+pcs property set stonith-enabled=true
+pcs property set no-quorum-policy=suicide
 ```
 
 Resources and stonith actions are now completely configured. Restart all cluster services in all nodes (execute the following in each one):
