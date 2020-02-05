@@ -39,6 +39,8 @@ qm set 101 -ide1 /dev/sdX
 
 Change "101" for the VM ID in proxmox and /dev/sdX for the SAN/NAS device you want to link to VMs.
 
+**NOTE:** it is needed to have the storage device BEFORE nodes are active. Ensure to have it available in VMs when you boot them.
+
 ## MBOX Cluster Virtual Machines OS Preparation
 
 The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts.
