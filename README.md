@@ -471,7 +471,13 @@ pcs status
 
 # Create shared filesystem resource
 
-Next step makes **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the active cluster node. Do it in only one online cluster node:
+The **/opt/zimbra** path will be a shared resources between nodes. Create it first:
+
+```
+mkdir -p /opt/zimbra
+```
+
+Next, make **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the active cluster node. Do it only first time on online cluster node:
 
 ```
 cd /
@@ -481,6 +487,8 @@ pcs -f add_fs constraint colocation add svczimbra zimbra_fs INFINITY
 pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
 ```
+
+Remember to change "**/dev/sdX**" to fit the propper device.
 
 And on each node enable services:
 
