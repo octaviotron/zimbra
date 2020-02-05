@@ -87,8 +87,8 @@ Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS 
 192.168.0.1    mbox01.domain.tld     mbox01
 192.168.0.2    mbox02.domain.tld     mbox02
 192.168.0.3    mbox03.domain.tld     mbox03
-192.168.0.4	   mbox.domain.tld		 mbox
-192.168.0.5    proxy01.domin.tld	 proxy01
+192.168.0.4    mbox.domain.tld       mbox
+192.168.0.5    proxy01.domin.tld     proxy01
 192.168.0.6    proxy02.domin.tld     proxy02
 192.168.0.7    proxy03.domin.tld     proxy03
 192.168.0.8    mail.domian.tld       mail
@@ -119,11 +119,23 @@ systemctl stop firewalld
 systemctl disable firewalld
 ```
 
-Remember later when you finnish to enable it again:
+Remember later, when you finnish all, to enable it again:
 ```
 systemctl start firewalld
 systemctl enable firewalld
 ```
+
+Zimbra needs to have SMTP ports available and CentOS (as well as others GNU/Linux distributions) have a postfix service, so it need to be disabled in order to continue:
+```
+systemctl stop postfix
+systemctl disable postfix
+```
+
+Also, all nodes needs to have a pointer in DNS resolution, so ensure your name server has propper records to each node. If you are using FreeIPA you can add it this way:
+```
+ipa-client-install --enable-dns-updates
+```
+
 
 Set the "hacluster" account password in al nodes:
 
