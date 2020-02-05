@@ -748,7 +748,7 @@ You have now configured a Zimbra Server with external LDAP accounts. Cheers.
 When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a stonith rule for each node, calling Proxmox KVM system to make actions over any failing virtual machine:
 
 
-On any active node make the stonith rules for each one:
+On any active node make the stonith rules:
 
 ```
 pcs stonith create fence_mboxs01 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
