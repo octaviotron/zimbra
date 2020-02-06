@@ -25,12 +25,7 @@ proxmox.domain.tld 192.168.0.10 <--- Proxmox KVM host
 
 ## Prepare Proxmox OS
 
-Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating System. In a root console in Proxmox host do:
-```
-apt install fence-agents
-```
-
-Also, you need to add a shared SAN/NAS storage resource enabled as a device for each virtual host you are going to configure as cluster. If the web UI does not let to make this, you will need to add it manually:
+You need to add a shared SAN/NAS storage resource enabled as a device for each virtual host you are going to configure as cluster. If the web UI does not let to make this, you will need to add it manually:
 
 ```
 cd /etc/pve/qemu-server/
@@ -168,33 +163,6 @@ And in each node reload daemons after modify this file:
 systemctl daemon-reload
 ```
 
-## Install PVE fence agent 
-
-CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
-
-```
-cd
-git clone https://github.com/ClusterLabs/fence-agents.git
-cd fence-agents/
-./autogen.sh
-./configure --with-agents=pve
-make && make install
-fence_pve --version
-```
-
-To test it, ask fence_pve from each cluster node:
-```
-/usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
-```
-
-Change <proxmox_ip> for the KVM Hypervisor address (192.168.0.10 in the example), leave "root@pam" without changes, put root Proxmox host password in <proxmox_passowrd> and set in <vm_id> the unique VM ID, for example:
-```
-/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="ThisIsMyPasswd" --plug=101 --action=status
-```
-
-You will get a "STATUS: OK" message if everything is ok.
-
-
 ## Create MBOX cluster
 
 
@@ -225,15 +193,9 @@ corosync-cmapctl | grep members
 pcs status corosync
 ```
 
-Disable stonith. It is temporary, needed to configure and will be activated later:
+Disable stonith (see in further section how to enable it):
 ```
 pcs property set stonith-enabled=false
-```
-
-And disable the quorum policy, also later it will be activated:
-
-```
-pcs property set no-quorum-policy=ignore
 pcs property
 ```
 
@@ -277,9 +239,7 @@ Create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
 #
 #
 #       usage: $0 {start|stop|reload|monitor|validate-all|meta-data}
-#
 #       The "start" arg starts a Zimbra instance
-#
 #       The "stop" arg stops it.
 #
 # OCF parameters:
@@ -743,7 +703,40 @@ Remember to change "cn=accounts,dc=domain,dc=tld", (uid=%u)" and "ldap://freeipa
 
 You have now configured a Zimbra Server with external LDAP accounts. Cheers.
 
-## Configure Fencing resources
+## Configure STONITH (optional)
+
+Fencing is used to make a forced node shutdown (like unplug the power cable, or press power button for 5s). This is OPTIONAL, do it only if you need to get rid a node when its status is offline:
+
+Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating System. In a root console in Proxmox host do:
+```
+apt install fence-agents
+```
+
+CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
+
+```
+cd
+git clone https://github.com/ClusterLabs/fence-agents.git
+cd fence-agents/
+./autogen.sh
+./configure --with-agents=pve
+make && make install
+fence_pve --version
+```
+
+To test it, ask fence_pve from each cluster node:
+```
+/usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
+```
+
+Change <proxmox_ip> for the KVM Hypervisor address (192.168.0.10 in the example), leave "root@pam" without changes, put root Proxmox host password in <proxmox_passowrd> and set in <vm_id> the unique VM ID, for example:
+```
+/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="ThisIsMyPasswd" --plug=101 --action=status
+```
+
+You will get a "STATUS: OK" message if everything is ok.
+
+
 
 When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a stonith rule for each node, calling Proxmox KVM system to make actions over any failing virtual machine:
 
