@@ -6,7 +6,7 @@ The entire schema is as following image:
 
 ![diagrama](imgs/Diagrama2.png)
 
-This is our sample IP addeses:
+This is our sample IP addreses:
 
 ```
 mbox01.domain.tld  192.168.0.1
@@ -861,7 +861,7 @@ The system will be modified.  Continue? [N] Y
 
 In many recipes and howtos zimbra-memcached is installed with zimbra-proxy, but the truth is there is only one ziimbra-memcached needed for zimbra services to work and in all tests, only zimbra-proxy package selected gives the expected behavior. Besides the installer will download and install zimbra-memcached, only the mailboxes servers will attend tho this services requests.
 
-Wait for the install process (lemonade maybe?) ant when it finnishes run:
+Wait for the install process (lemonade maybe?) and when it finnishes run:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
