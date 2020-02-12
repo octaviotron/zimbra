@@ -2,6 +2,14 @@
 
 This documentation is intended to have a full guide of how to install Zimbra (8.8.15 LTS) in a corosync/pacemaker Proxmox KVM cluster. It includes Stonith and Fencing configuration, as well as account Auto-Provision from external LDAP.
 
+## Foreword
+
+The community version of Zimbra (ZCS) does not provide clustering functions, there si no any information in the official documentation for doing mailbox clustering, there is a section dedicated to make multi-master LDAP but no for other zimlets.
+
+The the hack for achieving it, is to configure 3 GNU/Linux cluster nodes and add Zimbra services as a resource. Lucky, all zimbra files are in /opt/zimbra, so making this path as a floating mountpoint between nodes and ensuring no split-brain situation is possible (no more than one node reading and writing in this mountpoint) does the trick.
+
+## Architecture Design
+
 The entire schema is as following image:
 
 ![diagrama](imgs/Diagrama2.png)
