@@ -45,7 +45,7 @@ Change "**101**" for the VM ID in proxmox and **/dev/sdX** (rememeber to put the
 
 ## MBOX Cluster Virtual Machines OS Preparation
 
-The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts.
+The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts. It is important to have at minimum 3 cluster nodes: in a 2 cluster scenario there is no way to (completely) avoid a split-brain situation.
 
 In this example all virtual hosts are a fresh-new install of CentOS 7, with only base packages. 
 
