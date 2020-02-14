@@ -1,5 +1,7 @@
 # Zimbra Community Suite Cluster in Proxmox KVM hosts
 
+(Versión en español en https://github.com/octaviotron/zimbra/blob/master/README.es.md)
+
 This documentation is intended to have a full guide of how to install Zimbra (8.8.15 LTS) in a corosync/pacemaker Proxmox KVM cluster. It includes Stonith and Fencing configuration, as well as account Auto-Provision from external LDAP.
 
 ## Foreword
