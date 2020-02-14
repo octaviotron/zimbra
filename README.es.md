@@ -1,32 +1,34 @@
-# Zimbra Community Suite Cluster in Proxmox KVM hosts
+# Cluster de Zimbra Community Suite en hosts KVM (Proxmox)
 
-This documentation is intended to have a full guide of how to install Zimbra (8.8.15 LTS) in a corosync/pacemaker Proxmox KVM cluster. It includes Stonith and Fencing configuration, as well as account Auto-Provision from external LDAP.
+(english version in https://github.com/octaviotron/zimbra/blob/master/README.md)
 
-## Foreword
+Esta documentación es una guía completa de cómo instalar Zimbra (versión LTS 8.8.15) en un cluster corosync/pacemaker de máquinas virtuales en Proxmox. Incluye los pasos necesarios para permitir auto-provisión de cuentas usando un árbol LDAP externo e instrucciones para configurar Fencing (STONITH).
 
-The community version of Zimbra (ZCS) does not provide clustering functions, there si no any information in the official documentation for doing mailbox clustering, there is a section dedicated to make multi-master LDAP but no for other zimlets.
+## Prefacio
 
-The the hack for achieving it, is to configure 3 GNU/Linux cluster nodes and add Zimbra services as a resource. Lucky, all zimbra files are in /opt/zimbra, so making this path as a floating mountpoint between nodes and ensuring no split-brain situation is possible (no more than one node reading and writing in this mountpoint) does the trick.
+La versión comunitaria de Zimbra (ZCS) no provee funciones para trabajar en cluster. No existe documentación oficial para que los mensajes almacenados (zimlet mailboxd) tenga replicación y alta disponibilidad. La documentación solo trae instrucciones para hacer una configuración multi-maestro del servicio LDAP lo cual es insuficiente para un ambiente seguro de producción.
 
-## Architecture Design
+La solución propuesta en esta documentación consiste en configurar un cluster de 3 nodos donde el servicio Zimbra sea un recurso de pacemaker. Por suerte todos los archivos necesarios para que funcione Zimbra están en /opt/zimbra de manera que creando en esa ruta un punto de montaje a un recurso de almacenamiento compartido entre los nodos y asegurando que sólo uno de estos pueda leer y escribir (evitando una situación de split-brain) se hace el truco de clusterizar Zimbra.
 
-The entire schema is as following image:
+## Diseño de Arquitectura
+
+El panorama completo de la solución propuesta en este documento se puede obaservar en la siguiente ilustración:
 
 ![diagrama](imgs/Diagrama2.png)
 
-This is our sample IP addreses:
+Las siguientes son las direcciones IP y nombres de hosts que usaremos como ejemplo:
 
 ```
 mbox01.domain.tld  192.168.0.1
 mbox02.domain.tld  192.168.0.2
 mbox03.domain.tld  192.168.0.3
-mbox.domain.tld    192.168.0.4  <--- mbox cluster virtual ip
+mbox.domain.tld    192.168.0.4  <--- IP virtual del Cluster de mailboxd
 proxy01.domin.tld  192.168.0.5
 proxy02.domin.tld  192.168.0.6
 proxy03.domin.tld  192.168.0.7
-mail.domian.tld    192.168.0.8  <--- proxy round-robin virtual ip
+mail.domian.tld    192.168.0.8  <--- IP virtual en roud-robin para los proxies
 
-proxmox.domain.tld 192.168.0.10 <--- Proxmox KVM host
+proxmox.domain.tld 192.168.0.10 <--- Hypervisor Proxmox
 
 ```
 
