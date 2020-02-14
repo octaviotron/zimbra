@@ -32,26 +32,26 @@ proxmox.domain.tld 192.168.0.10 <--- Hypervisor Proxmox
 
 ```
 
-## Prepare Proxmox OS
+## Preparación del Sistema Operativo donde corre Proxmox
 
-You need to add a shared SAN/NAS storage resource enabled as a device for each virtual host you are going to configure as cluster. If you are using another sotrage resource, maybe the web UI does not let to make this, you will need to add it manually:
+Es necesaria una unidad de almacenamiento SAN o NAS añadida como un dispositivo en cada máquiona virtual del cluster. Si se usa otro recurso (disco RAID compartido, montaje NFS, etc) es posible que la interfaz web de Proxmox no permita añadirlo a mas de una máquina virtual. en ese caso para hacerlo manualmente se pueden ejecutar las siguientes instrucciones:
 
 ```
 cd /etc/pve/qemu-server/
 qm set 101 -ide1 /dev/sdX
 ```
 
-Change "**101**" for the VM ID in proxmox and **/dev/sdX** (rememeber to put the right one here) for the SAN/NAS device you want to link to VMs.
+Notese que hay que cambiar "**101**" por el ID de la máquina virtual que aplique en su caso y **/dev/sdX** por el dispositivo de almacenamiento que se ve desde el sistema operativo donde corre Proxmox.
 
-**NOTE:** it is needed to have this storage device enabled BEFORE nodes are active. Ensure to have it available in VMs when you boot them.
+**NOTA:** es necesario que esté habilitado este recurso de almacenamiento **ANTES** de proceder a hacer la instalación del cluster. Se debe asegurar ANTES que las máquinas virtuales al levantar vean el dispositivo para poder proseguir con los siguientes pasos.
 
-## MBOX Cluster Virtual Machines OS Preparation
+## Preparación del Sistema Operativo de los nodos del cluster
 
-The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts. It is important to have at minimum 3 cluster nodes: in a 2 cluster scenario there is no way to (completely) avoid a split-brain situation.
+El proceso siguiente debe realizarse simultáneamente en todos los nodos del cluster. Es muy importante que el número de nodos sea exactamente 3 para que las instrucciones de esta documentación garanticen (completamente) que en su entorno resultante no habrá una situación de split-brain. Muchas recetas en internet (la mayoría de ellas) muestran como montar un cluster con sólo 2 nodos (inhabilitando el quorum) y eso tarde o temprano se traducirá en la corrupción de la data.
 
-In this example all virtual hosts are a fresh-new install of CentOS 7, with only base packages. 
+Se usará en este ejemplo CentOS 7 recién instalado en cada nodo, sólo con los paquetes básicos y escenciales.
 
-This are common steps needed to be executed on each node (on all of them):
+En cada uno de los nodos se deben ejecutar los siguientes comandos, para añadir repositorios adicionales y actualizar el listado de paqquetes disponibles para ser instalados:
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -60,7 +60,7 @@ yum -y update
 yum -y upgrade
 ```
 
-Install needed packages in all nodes too:
+En cada uno de los nodos, se instalan todos los paquetes necesarios:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
@@ -69,25 +69,26 @@ yum -y install ipa-client unzip net-tools sysstat openssh-clients \
     git gcc make automake autoconf libtool pexpect python-requests
 ```
 
-It is important to set an FQDN hostname. In mbox01 node do:
+Es muy importante que cada nodo tenga asignado un FQDN. En el nodo "mbox01":
 
 ```
 hostnamectl set-hostname "mbox01.domain.tld" && exec bash 
 ```
+(por supuesto, debe sustituir "domain.tld" por el nombre de su dominio)
 
-In mbox02 do:
+En "mbox02":
 
 ```
 hostnamectl set-hostname "mbox02.domain.tld" && exec bash 
 ```
 
-And in mbox03 do:
+En "mbox03":
 
 ```
 hostnamectl set-hostname "mbox03.domain.tld" && exec bash 
 ```
 
-Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
+Seguidamente, se deben colocar las direcciones de los demás componentes del sistema de correo, de manera que ante un fallo del DNS continúen funcionando los servicios y el cluster. Esto debe estar en **/etc/hosts** en cada uno de los nodos:
 
 ```
 192.168.0.1    mbox01.domain.tld     mbox01
@@ -101,31 +102,32 @@ Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS 
 192.168.0.10   proxmox.domain.tld    proxmox
 ```
 
-
-Disable SELinux Policies in all nodes:
+Es necesario, en cada uno de los nodos, deshabilitar las políticas SELinux que trae CentOS por defecto:
 ```
 setenforce 0
 ```
 
-Also disable SELinux for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
+Para que SELinux quede en ese estado en los próximos inicios del sistema operativo, es necesario cambiar la siguiente línea del archivo **/etc/selinux/config** en cada uno de los nodos:
 ```
 SELINUX=permissive
 ```
 
-Enable prots in Firewall:
+En cada uno de los nodos, el cortafuegos necesita tener habilitados los puertos necesarios:
+
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
 ```
 
-It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this in all nodes:
+Dependiendo de cada caso, es posible que sea necesario habilitar otros puertos adicionales o el proceso puede fallar, se puede por tanto inahbilitar temporalmente el cortafuegos de la siguiente manera en cada nodo:
 
 ```
 systemctl stop firewalld
 systemctl disable firewalld
 ```
 
-Remember later, when you finnish all, to enable it again:
+Al terminar todos los pasos de esta documentación, es importante asegurar cuáles puertos nos realmente necesarios tener abiertos y volver a levantar el servicio:
+
 ```
 systemctl start firewalld
 systemctl enable firewalld
