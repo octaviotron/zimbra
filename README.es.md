@@ -211,9 +211,9 @@ En el diseño actual no se considera necesario configurar el fencing de los nodo
 pcs property set stonith-enabled=false
 ```
 
-## Create cluster Virtual IP resource
+## Definición de la IP virtual del cluster
 
-Now, create a VIRTUAL IP resource:
+Para crear el recurso de IP virtual, se ejecuta el siguiente comando en uno de los nodos del cluster:
 ```
 pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.4 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
 ```
