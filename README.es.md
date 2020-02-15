@@ -441,7 +441,7 @@ pcs status
 
 # Definición de la ruta con los archivos comunes
 
-The **/opt/zimbra** path will be a shared resources between nodes. Create it first:
+La ruta donde residen todos los archivos que necesitan los servicios relacionados con Zimbra se encuentran en **/opt/zimbra**. Se crea este directorio:
 
 ```
 mkdir -p /opt/zimbra
