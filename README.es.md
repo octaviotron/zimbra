@@ -522,13 +522,18 @@ Ahora si, se puede correr el programa que configura Zimbra:
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You may get an error message like this, informing your about resolving MX record, so you will need to change it an give the right domain name. Rememeber MX record points to mail.domain.tld and not zimbra01.domain.tld:
-
+Puede que aparezca un error como este:
 ```
 DNS ERROR resolving MX for zimbra01.domain.tld
 It is suggested that the domain name have an MX record configured in DNS
-Change domain name? [Yes] <---- press ENTER
-Create domain: [zimbra01.domain.tld] domain.tld <----- your MX host here
+Change domain name? [Yes]
+```
+
+Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo. Se debe colocar entonces el nombre de dominio correcto para que los buzones tengan una dirección "usuario@dominio.tld" y no "usuario@zimbra01.dominio.tld". Este diálogo debe responderse de la siguiente manera:
+
+```
+Change domain name? [Yes] <---- ENTER
+Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
 
 Set Zimbra Admin Password:
