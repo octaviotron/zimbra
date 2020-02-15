@@ -231,9 +231,9 @@ virtual_ip     (ocf::heartbeat:IPaddr2):       Started mbox01.domain.tls
 ```
 
 
-# Create ZIMBRA cluster daemon control resource
+# Creación del recurso en el cluster para el servicio ZIMBRA
 
-Create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
+Se crea un archivo **/usr/lib/ocf/resource.d/heartbeat/zimbractl** con el siguiente contenido:
 
 
 ```bash
@@ -407,24 +407,24 @@ validate-all)
 esac
 ```
 
-And give 755 permission:
+Creado este archivo se le otorgan permisos de ejecución:
 
 ```
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Copy to the other nodes:
+Seguidamente se copia el archivo en los otros nodos:
 ```
 scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
 scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox03.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-And in each node do:
+Luego en cada nodo se le deben otorgar permisos de ejecución:
 ```
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Create "zimbractl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated:
+Para añadir el recurso (llamdo "zimbractl" en este ejemplo) se ejecutan las siguientes instrucciones:
 ```
 pcs resource create svczimbra ocf:heartbeat:zimbractl op monitor interval=30s
 pcs resource op remove svczimbra monitor
@@ -432,7 +432,7 @@ pcs constraint colocation add svczimbra virtual_ip INFINITY
 pcs constraint order virtual_ip then svczimbra
 ```
 
-Check if it is loaded and active as a cluster resource:
+Se puede comprobar que se ha cargado el recurso mediente el siguiente comando:
 
 ```
 pcs status
