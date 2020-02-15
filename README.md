@@ -112,7 +112,7 @@ Also disable SELinux for next reboots, changing the following line in **/etc/sel
 SELINUX=permissive
 ```
 
-Enable prots in Firewall:
+Enable ports in Firewall:
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
@@ -186,7 +186,7 @@ This will ask for a user and a password. Put "**hacluster**" as user and the pas
 Set a name for the cluster:
 
 ```
-pcs cluster setup --name cluster_cups mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
+pcs cluster setup --name cluster_zimbra mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
 Start the cluster:
