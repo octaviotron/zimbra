@@ -439,7 +439,7 @@ pcs status
 ```
 
 
-# Create shared filesystem resource
+# Definición de la ruta con los archivos comunes
 
 The **/opt/zimbra** path will be a shared resources between nodes. Create it first:
 
