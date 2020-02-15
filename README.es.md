@@ -447,7 +447,7 @@ La ruta donde residen todos los archivos que necesitan los servicios relacionado
 mkdir -p /opt/zimbra
 ```
 
-Next, make **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the active cluster node. Do it only first time on online cluster node:
+Ese directorio debe crearse como un recurso del cluster, de manera que sólo el nodo activo lo tendrá montado. Esto debe hacerse **sólo en el nodo activo**:
 
 ```
 cd /
