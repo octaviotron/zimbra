@@ -240,13 +240,10 @@ Se crea un archivo **/usr/lib/ocf/resource.d/heartbeat/zimbractl** con el siguie
 #!/bin/sh
 #
 # Resource script for Zimbra
-#
 # Description:  Manages Zimbra as an OCF resource in
 #               an high-availability setup.
-#
 # Author:       RRMP <tigerlinux@gmail.com>
 # License:      GNU General Public License (GPL)
-#
 #
 #       usage: $0 {start|stop|reload|monitor|validate-all|meta-data}
 #       The "start" arg starts a Zimbra instance
@@ -468,19 +465,15 @@ systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-## Installing Zimbra
+## Instalación de Zimbra
 
-Zimbra Community Suite is not intended to work as a cluster. There is no any official documentation with guidelines to do that. So, we need to make a hack: we are going to install ZCS as usually, in the normal way in the first cluster node. It will set the Operating Systen environment (users, permissions, etc) and in /opt/zimbra will be all services files. Well... in the other two nodes we will make the same, but ignoring all /opt/zimbra stuff, because we will use only first one (using SAN/NAS storage)
-
-
-It is needed to make temporary the address resolution of "**mail.domain.tld**" to point to this server, so change /etc/hosts line to:
-
+Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
 
 ```
 127.0.0.1	mail.domain.tld mail 
 ```
 
-And remember having /opt/zimbra as a mountpoint to your NAS or SAN storage:
+Es importante que en **/opt/zimbra** se encuentre montado el dispositivo de almacenamiento que se compartirá entyre los nodos.
 
 Download and Install the Software:
 
@@ -945,6 +938,7 @@ This is a bug fix: all logs comes in a loop when the server sends their messages
 
 ## Links (consulted documentation):
 
+- Zimbra Cluster: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
 - https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
 - https://access.redhat.com/solutions/293183
 - https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
