@@ -218,19 +218,17 @@ Para crear el recurso de IP virtual, se ejecuta el siguiente comando en uno de l
 pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.4 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
 ```
 
-We are using "eth0" here to create "eth0:0" alias. Please verify your network interface is this or rename as needed.
+En este caso se indica "eth0" como la interfaz para crear el alias "et0:0" que tendrá asociada la IP Virtual. Se debe verificar que es "eth0" el nombre del dispositivo de red que usa el Sistema Operativo del nodo.
 
-Verify the creation of the virtual IP:
+Se verifica que se ha creado satisfactoriamente este recusro ejecutando el siguiente comando:
 ```
 pcs status resources
 ```
 
-You will get a message with a line like this:
+En la salida obtenida se verá una línea similar a esta, indicando que el recurso ha sido asingado al host mbox01:
 ```
 virtual_ip     (ocf::heartbeat:IPaddr2):       Started mbox01.domain.tls
 ```
-
-This tells cups01 host has the virtual ip assigned. you can ping and open a SSH session to verify it.
 
 
 # Create ZIMBRA cluster daemon control resource
