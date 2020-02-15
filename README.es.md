@@ -536,9 +536,9 @@ Change domain name? [Yes] <---- ENTER
 Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
 
-Set Zimbra Admin Password:
+Cuando Set Zimbra Admin Password:
 
-When prompt shows text **"Address unconfigured (++) items (? - help)"** press 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
+Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
 
 After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
 
