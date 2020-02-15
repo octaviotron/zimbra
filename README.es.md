@@ -133,30 +133,32 @@ systemctl start firewalld
 systemctl enable firewalld
 ```
 
-Zimbra needs to have SMTP ports available and CentOS (as well as others GNU/Linux distributions) have a postfix service, so it need to be disabled in order to continue:
+Es necesario que no haya ningún otro servicio activo que use el puerto 25/tcp (SNMP) y CentOS por defecto provee un servicio postfix para el manejo de la mensajería interna del sistema operativo, así que es necesario detenerlo e inhabilitarlo en cada uno de los nodos:
 ```
 systemctl stop postfix
 systemctl disable postfix
 ```
 
-Also, all nodes needs to have a pointer in DNS resolution, so ensure your name server has propper records to each node. If you are using FreeIPA you can add it this way:
+Todos los clientes deben encontrar la dirección IP de los servicios, por lo tanto debe haber un registro en el DNS de cada uno de los nodos del cluster. Esto debe hacerse manualmente para cada caso.
+
+Si se usa FreeIPA para lograr esta resolución de nombres, en cada nodo debe realizarse el enroll mediante el siguiente comando:
 ```
 ipa-client-install --enable-dns-updates
 ```
 
-
-Set the "hacluster" account password in al nodes:
+Para incorporar cada nodo como miembro del cluster se debe colocar en cada uno la misma contraseña para el usuario "hacluster":
 
 ```
-echo "hacluster:your_password"|chpasswd
+echo "hacluster:tu_password"|chpasswd
 ```
-(change "your_password" and remember it for later)
+Se debe cambiar "to_password" por la contraseña elegida, debe ser la misma en todos los nodos.
 
-On all nodes start cluster system service:
+Seguidamente en cada nodo se levanta el cluster:
 ```
 systemctl start pcsd
 systemctl status pcsd
 ```
+
 Corosync service has a bug in CentOS 7 which sometimes starts corosync too early when some needed system resources are not already available. To avoid this, add a 3 seconds delay before service starts, to do this, in all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "**ExecStartPre=/usr/bin/sleep 3**" after "**[service]**" section. The file must be as follow on all nodes:
 
 ```
