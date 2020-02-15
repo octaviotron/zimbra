@@ -458,9 +458,9 @@ pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
 ```
 
-Remember to change "**/dev/sdX**" to fit the propper device.
+NOTA: es necesario cambiar "**/dev/sdX**" para ajustarlo al nombre correcto del dispositivo de almacenamiento.
 
-And on each node enable services:
+Finalmente, se concluye la configuración del cluster habilitando los servicios permanentemente:
 
 ```
 systemctl enable pcsd
