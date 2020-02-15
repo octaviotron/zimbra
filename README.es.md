@@ -475,7 +475,7 @@ Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. 
 
 Es importante que en **/opt/zimbra** se encuentre montado el dispositivo de almacenamiento que se compartirá entyre los nodos.
 
-Download and Install the Software:
+En el primer nodo (el que se encuentra activo) se descarga e instala el Software:
 
 ```
 mkdir /root/zimbra && cd /root/zimbra
@@ -484,9 +484,8 @@ tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
 cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 ```
-Note "-s" option: it will install the software without configure it. We will make it later.
 
-The instaler will ask you several questions, choose the following options:
+Nóese la opción "**-s**", la cual realizará la instalación sin configurar el sistema, lo cual se realizará posteriormente. El instalador realizará unas preguntas, que deben responderse como se especifican a continuación:
 
 ```
   Do you agree with the terms of the software license agreement? [N] y
@@ -501,16 +500,15 @@ The instaler will ask you several questions, choose the following options:
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
-  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
+  Install zimbra-drive [N] <--- opcional
+  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- ENTER
   Install zimbra-chat [Y]
   The system will be modified.  Continue? [N] Y
 ```
 
-Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
+Despùés de seleccionar la última de esas opciones, se descargarán y actualizarán los paquetes necesarios. En este punto puede ir por un café, porque Zimbra usa Java y todo lo que usa Java tarda mucho tiempo y consume mucho procesador y memoria, hasta para ejecutar los procesos mas simples.
 
-
-Fix CA paths:
+Antes de configurar Zimbra, es necesario corregir la ruta en la cual se encuentran la unidad certificadora (CA):
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -518,8 +516,7 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
 
-
-Then run the installer configuration:
+Ahora si, se puede correr el programa que configura Zimbra:
 
 ```
 /opt/zimbra/libexec/zmsetup.pl
