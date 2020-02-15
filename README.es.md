@@ -188,29 +188,27 @@ pcs cluster auth mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 La instrucción anterior pedirá un usuario, donde se debe colocar "**hacluster**" y seguidamente se solicitará una contraseña, donde debe colocarse la suministrada en los pasos anteriores (donde se sustituyo "tu_password").
 
 
-Luego, se suministra el nomnre del cluster ("cluster_zimbra" en este ejemplo):
+Se debe suministrar un nomnre al cluster ("cluster_zimbra" en este ejemplo), esto se hace en uno solo de los nodos:
 
 ```
 pcs cluster setup --name cluster_zimbra mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
-Start the cluster:
+De la misma manera en uno de los nodos se levanta el cluster:
 ```
 pcs cluster start --all
 ```
 
-To check cluster status you can see the output of this commands:
+Con las siguientes instrucciones se puede verificar el estado de los componentes que hasta ahora se han configurado en cluster, estos comandos deben dar la misma salida al ejecutarse en cualquiera de los nodos:
 
 ```
 pcs status cluster
-corosync-cmapctl | grep members
 pcs status corosync
 ```
 
-Disable stonith (see in further section how to enable it):
+En el diseño actual no se considera necesario configurar el fencing de los nodos, por lo cual se desactiva STONITH. En una sección posterior de este documento se explica detalladamente cómo habilitarlo en caso que se considere realmente bnecesario:
 ```
 pcs property set stonith-enabled=false
-pcs property
 ```
 
 ## Create cluster Virtual IP resource
