@@ -151,7 +151,8 @@ Para incorporar cada nodo como miembro del cluster se debe colocar en cada uno l
 ```
 echo "hacluster:tu_password"|chpasswd
 ```
-Se debe cambiar "to_password" por la contraseña elegida, debe ser la misma en todos los nodos.
+Se debe cambiar "tu_password" por alguna contraseña arbitraria la cual debe ser la misma en todos los nodos.
+
 
 Seguidamente en cada nodo se levanta el cluster:
 ```
@@ -159,7 +160,7 @@ systemctl start pcsd
 systemctl status pcsd
 ```
 
-Corosync service has a bug in CentOS 7 which sometimes starts corosync too early when some needed system resources are not already available. To avoid this, add a 3 seconds delay before service starts, to do this, in all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "**ExecStartPre=/usr/bin/sleep 3**" after "**[service]**" section. The file must be as follow on all nodes:
+El sistema de cluster en CentOS presenta un mal funcionamiento en algunos casos, sobre todo cuando corre en hardware con procesadores muy veloces, por lo cual es necesario retrasar levemente su inicio de manera de asegurar que a otros servicios les de tiempo de levantar antes de ser consiltados por corosync. Esto se logra modificando el archivo **/usr/lib/systemd/system/corosync.service**, añadiendo la directiva "**ExecStartPre=/usr/bin/sleep 3**" en la sección "**[service]**" del script en systemd. Esta sección del archivo debe quedar así entonces en todos los nodos:
 
 ```
 [Service]
@@ -167,30 +168,30 @@ ExecStartPre=/usr/bin/sleep 3
 ExecStart=/usr/share/corosync/corosync start
 ExecStop=/usr/share/corosync/corosync stop
 Type=forking
-...
 ```
 
-And in each node reload daemons after modify this file:
+Para que el cambio surja efecto, luego de haber hecho la modificación debe renovarse la configuración que reside en memoria en cada uno de los nodos:
 
 ```
 systemctl daemon-reload
 ```
 
-## Create MBOX cluster
+## Creación de los recursos del cluster
 
 
-On any active node make auth keys share between nodes:
+En uno solo de los nodos, se autorizan los hosts que componen el cluster:
+
 ```
 pcs cluster auth mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
-This will ask for a user and a password. Put "**hacluster**" as user and the password you set in previous steps.
+La instrucción anterior pedirá un usuario, donde se debe colocar "**hacluster**" y seguidamente se solicitará una contraseña, donde debe colocarse la suministrada en los pasos anteriores (donde se sustituyo "tu_password").
 
 
-Set a name for the cluster:
+Luego, se suministra el nomnre del cluster ("cluster_zimbra" en este ejemplo):
 
 ```
-pcs cluster setup --name cluster_cups mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
+pcs cluster setup --name cluster_zimbra mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
 Start the cluster:
