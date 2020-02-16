@@ -465,9 +465,9 @@ systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-## Instalación de Zimbra
+## Instalación de Zimbra (nodo mbox01)
 
-Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
+Se realizará la instalación de los paquetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
 
 ```
 127.0.0.1	mail.domain.tld mail 
@@ -548,7 +548,7 @@ Ir a la opción "2" **zimbra-ldap** y luego a la opción "3" **"Domain to create
 
 Al terminar este paso, se debe regresar al manú principal presionando ENTER en el mensaje **"Select, or 'r' for previous menu [r]"**
 
-### Install Zimbra server:
+### Instalación de los binarios:
 
 Para comenzar a instalar Zimbra, hay que seleccionar la opción "a" en el mensaje **"Select from menu, or press 'a' to apply config (? - help)"**
 ```
@@ -638,7 +638,7 @@ Las preguntas que se hacen a continuación deben responderse exactamente igual:
   The system will be modified.  Continue? [N] Y
 ```
 
-Tiempo para un café (quizás no muy bueno para la salud tantos, puede servir un té). Cuando finalice:
+Tiempo para un café (quizás no muy bueno para la salud tomar mucho... puede servir té o limonada). Cuando finalice:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -661,21 +661,29 @@ mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
 
-And delete the /etc/hosts line with "**mail.domain.tld**" definition
+Se elimina la línea en **/etc/hosts** donde se definió temporalmente "**mail.domain.tld**"
 
-Now, restore cluster in mbox02:
+Ahora, se repite en mbox03 este mismo procedimiento, de manera idéntica.
+
+### Levantando y comprobando el funcionamiento en cluster
+
+Ahora que todos los nodos tienen instalado Zimbra, se levantan los recursos del cluster:
 
 ```
 pcs cluster start mbox02.domain.tld
+pcs cluster start mbox03.domain.tld
 ```
 
-So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) mbox01 will pass all services to mbox02 or mbx03 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
+En este punto, ya se ha configurado a Zimbra para trabajar en un cluster activo-pasivo de 3 nodos. Para comprobarlo, se abre la siguiente URL en un navegador dentro de la red: **https://mail.domain.tld**
+
+
+Si se detiene o apaga uno de los nodos, por ejemplo mbox01, los servicios (que son ahora recursos del cluster) serán levantados en otro de los nodos. Cuando esto sucede hay debe esperar mientras levanta todos los componentes de Zimbra, los cuales demoran entre 90 y 120 segundos para estar en línea de nuevo (Java...). Se puede comprobar el estado de transferencia de los recursos mediante el siguiente comando:
 
 ```
 watch pcs status
 ```
 
-(CONTOL + C to exit)
+(CONTOL + C para salir)
 
 
 # Set LDAP Auto-Provission:
