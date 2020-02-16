@@ -538,9 +538,7 @@ Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio
 
 Cuando Set Zimbra Admin Password:
 
-Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
-
-After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
+Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar la opción "7" **zimbra-store** y luegp la opción "4" **Admin Password** para colocar una contraseña. Al hacerlo, saldrá un mensaje con el texto **Select, or 'r' for previous menu [r]** donde presionando la tecja ENTER se regresará al manú principal.
 
 Set Domain in LDAP:
 
