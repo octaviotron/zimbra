@@ -529,47 +529,62 @@ It is suggested that the domain name have an MX record configured in DNS
 Change domain name? [Yes]
 ```
 
-Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo. Se debe colocar entonces el nombre de dominio correcto para que los buzones tengan una dirección "usuario@dominio.tld" y no "usuario@zimbra01.dominio.tld". Este diálogo debe responderse de la siguiente manera:
+Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo:
 
 ```
 Change domain name? [Yes] <---- ENTER
 Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
 
-Cuando Set Zimbra Admin Password:
+### Definir la contraseña de administración de Zimbra:
 
 Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar la opción "7" **zimbra-store** y luegp la opción "4" **Admin Password** para colocar una contraseña. Al hacerlo, saldrá un mensaje con el texto **Select, or 'r' for previous menu [r]** donde presionando la tecja ENTER se regresará al manú principal.
 
-Set Domain in LDAP:
+### Definir el nombre de dominio LDAP:
 
-If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
+Si se omite este paso, los buzones de correo tendrán una dirección como "usuario@zimbra01.dominio.tld" y seguramente se querrá que sean como "usuario@dominio.tld", así que para cambiar esto:
 
-Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and verify if it needed to change default domain to "domain.tld" (or if already configured, it depends on your DNS)
+Ir a la opción "2" **zimbra-ldap** y luego a la opción "3" **"Domain to create"** para verificar que la configuración correcta sea "domain.tld".
 
-Install Zimbra server:
+Al terminar este paso, se debe regresar al manú principal presionando ENTER en el mensaje **"Select, or 'r' for previous menu [r]"**
 
-When you have set it, return to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message.
+### Install Zimbra server:
 
+Para comenzar a instalar Zimbra, hay que seleccionar la opción "a" en el mensaje **"Select from menu, or press 'a' to apply config (? - help)"**
 ```
   Select from menu, or press 'a' to apply config (? - help) a
+```
+
+Seguidamente preguntará si se desea guardar la configuración en un archivo, esto es necesario pues en los próximos pasos se usará esa configuración para ser replicada en los otros nodos:
+
+```
   Save configuration data to a file? [Yes]
+```
+
+A continuación se preguntará dónde se desea almacenar el archivo de configuración. Zimbra colocará un nombre por defecto, el cual se podrá usar:
+```
   Save config in file: [/opt/zimbra/config.21593]
+```
+
+Para comenzar la instalación hay que responder "Yes" en la siguiente pregunta:
+```
   The system will be modified - continue? [No] Yes
 ```
 
-Zimbra will start to install, go for another coffe, Java presents it:
+Acá se puede ir a buscar otro café, Java te lo invita para que esperes con su logotipo en mano. Después que te hayas tomado el café y hayas tenido tiempo para conversar con alguien sobre religión o sobre el movimiento perpetuo, saldrá esl siguiente mensaje:
 
 ```
   Notify Zimbra of your installation? [Yes]
   Configuration complete - press return to exit
 ```
 
-Now, copy the created config file to the other node:
-
+Ahora, se debe copiar el archivo de configuración en los otros nodos:
+```
 scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
+scp /opt/zimbra/config.21593 zimbra03.domain.tld:/root/zmconfig.log
+```
 
-
-Now, delete "**mail.domain.tld**" line in /etc/hosts
+Para finalizar, se debe eliminar la definición "**mail.domain.tld**" colocada temporalmente en el archivio **/etc/hosts**
 
 ## Install the mbox02 and mbox03 nodes
 
