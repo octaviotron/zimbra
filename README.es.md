@@ -465,9 +465,9 @@ systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-## Instalación de Zimbra (nodo mbox01)
+## Instalación de Zimbra
 
-Se realizará la instalación de los paquetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
+Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
 
 ```
 127.0.0.1	mail.domain.tld mail 
@@ -524,89 +524,72 @@ Ahora si, se puede correr el programa que configura Zimbra:
 
 Puede que aparezca un error como este:
 ```
-DNS ERROR resolving MX for mbox01.domain.tld
+DNS ERROR resolving MX for zimbra01.domain.tld
 It is suggested that the domain name have an MX record configured in DNS
 Change domain name? [Yes]
 ```
 
-Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo:
+Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo.
 
 ```
 Change domain name? [Yes] <---- ENTER
-Create domain: [mbox01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
+Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
+Cuando termnia este proceso, se muestra un menú en el cual es necesario como primer paso definir una contraseña de administrador de Zimbra. Para hacer eso, se escogen las sigientes opciones cuando en en diálogo aparezca el mensaje **"Address unconfigured (++) items (? - help)"**
+- Seleccionar la opción 7: **zimbra-store** en el menú principal
+- Seleccionar la opción 4: **Admin Password**
 
-### Definir la contraseña de administración de Zimbra:
+Allí se coloca una contraseña o se toma nota de la que Zimbra aleatoriamente propone como opción. Para regresar al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**"
 
-Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar la opción "7" **zimbra-store** y luegp la opción "4" **Admin Password** para colocar una contraseña. Al hacerlo, saldrá un mensaje con el texto **Select, or 'r' for previous menu [r]** donde presionando la tecja ENTER se regresará al manú principal.
+Es necesario verificar que el dominio que se creará en el árbl LDAP coincide con el que se definió anteriormente. Si se omite este paso, es posible que los nombres difieran y los buzones de correo sean "**usuario@mbox01.domain.tld**" y no "**usuario@domain.tld**":
+- Seleccionar la opción 2: **"zimbra-ldap"** en el menú principal
+- Seleccionar la opción 3: **"Domain to create"** y verificar que coincida con el dominio raíz o cambiarlo en caso que nea necesario.
 
-### Definir el nombre de dominio LDAP:
-
-Si se omite este paso, los buzones de correo tendrán una dirección como "usuario@mbox01.dominio.tld" y seguramente se querrá que sean como "usuario@dominio.tld", así que para cambiar esto:
-
-Ir a la opción "2" **zimbra-ldap** y luego a la opción "3" **"Domain to create"** para verificar que la configuración correcta sea "domain.tld".
-
-Al terminar este paso, se debe regresar al manú principal presionando ENTER en el mensaje **"Select, or 'r' for previous menu [r]"**
-
-### Instalación de los binarios:
-
-Para comenzar a instalar Zimbra, hay que seleccionar la opción "a" en el mensaje **"Select from menu, or press 'a' to apply config (? - help)"**
-```
-  Select from menu, or press 'a' to apply config (? - help) a
-```
-
-Seguidamente preguntará si se desea guardar la configuración en un archivo, esto es necesario pues en los próximos pasos se usará esa configuración para ser replicada en los otros nodos:
+Se regresa al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**" y desde allí se inicia la instalación:
 
 ```
+  Select from menu, or press 'a' to apply config (? - help) a 
   Save configuration data to a file? [Yes]
-```
-
-A continuación se preguntará dónde se desea almacenar el archivo de configuración. Zimbra colocará un nombre por defecto, el cual se podrá usar:
-```
   Save config in file: [/opt/zimbra/config.21593]
-```
-
-Para comenzar la instalación hay que responder "Yes" en la siguiente pregunta:
-```
   The system will be modified - continue? [No] Yes
 ```
 
-Acá se puede ir a buscar otro café, Java te lo invita para que esperes con su logotipo en mano. Después que te hayas tomado el café y hayas tenido tiempo para conversar con alguien sobre religión o sobre el movimiento perpetuo, saldrá el siguiente mensaje:
+Zimbra will start to install, go for another coffe, Java presents it:
 
 ```
   Notify Zimbra of your installation? [Yes]
   Configuration complete - press return to exit
 ```
 
-Ahora, se debe copiar el archivo de configuración en los otros nodos:
-```
-scp /opt/zimbra/config.21593 mbox02.domain.tld:/root/zmconfig.log
-scp /opt/zimbra/config.21593 mbox03.domain.tld:/root/zmconfig.log
-```
+Now, copy the created config file to the other node:
 
-Para finalizar, se debe eliminar la definición "**mail.domain.tld**" colocada temporalmente en el archivio **/etc/hosts**
+scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
 
-## Instalar los otros nodos (mbox02 y mbox03)
 
-**CUIDADO:** Este procedimiento debe hacerse con los nodos **OFFLINE**. Para esto, en el nodo mbox01 se ejecuta:
+Now, delete "**mail.domain.tld**" line in /etc/hosts
+
+## Install the mbox02 and mbox03 nodes
+
+**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
 
 ```
 pcs cluster stop mbox02.domain.tld
 pcs cluster stop mbox03.domain.tld
 ```
 
-Si en mbox02 y mbox03 se ejecuta:
+Now, in each node, if you do:
+
 ```
 pcs status
 ```
 
-Se obtendrá un mensaje como este:
+You will get a message like this:
 
 ```
 Error: cluster is not currently running on this node
 ```
 
-Lo cual es lo esperado. Ahora en esos nodos es necesario colocar temporalmente **mail.domain.tld** en **/etc/hosts** tal cual se hizo en la instalación de mbox01, siguiendo luego los mismos pasos:
+In the **offline** nodes (mbox02 and mbox03) It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
 
 ```
 mkdir /opt/zimbra
@@ -617,7 +600,7 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 ```
 
-Las preguntas que se hacen a continuación deben responderse exactamente igual:
+Follow the instaler questions with the same options, make sure they are the same:
 
 ```
   Do you agree with the terms of the software license agreement? [N] y
@@ -632,13 +615,15 @@ Las preguntas que se hacen a continuación deben responderse exactamente igual:
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] <--- opcional 
+  Install zimbra-drive [N] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
   Install zimbra-chat [Y] 
   The system will be modified.  Continue? [N] Y
 ```
 
-Tiempo para un café (quizás no muy bueno para la salud tomar mucho... puede servir té o limonada). Cuando finalice:
+Cofee time (well... maybe it will be no good for health, tea will aso works).
+
+When it finishes:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -646,14 +631,13 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
 
-Ahora se usará el archivo de configuración copiado desde mbox01:
+And now, use the same config file (the file you copies by SCP in previous steps)
 
 ```
 /opt/zimbra/libexec/zmsetup.pl -c /root/zmconfig.log
 ```
 
-Al finalizar, hay que detener el servicio y deshacerse del contenido de /opt/zimbra (pues esa ruta será la montada por el cluster y el contenido ya está en mbox01 ¡ese es el truco!
-
+After it, stop zimbra services and get rid of all files created by the installer:
 ```
 /etc/init.d/zimbra stop
 killall -9 -u zimbra
@@ -661,29 +645,21 @@ mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
 
-Se elimina la línea en **/etc/hosts** donde se definió temporalmente "**mail.domain.tld**"
+And delete the /etc/hosts line with "**mail.domain.tld**" definition
 
-Ahora, se repite en mbox03 este mismo procedimiento, de manera idéntica.
-
-### Levantando y comprobando el funcionamiento en cluster
-
-Ahora que todos los nodos tienen instalado Zimbra, se levantan los recursos del cluster:
+Now, restore cluster in zimbra02:
 
 ```
 pcs cluster start mbox02.domain.tld
-pcs cluster start mbox03.domain.tld
 ```
 
-En este punto, ya se ha configurado a Zimbra para trabajar en un cluster activo-pasivo de 3 nodos. Para comprobarlo, se abre la siguiente URL en un navegador dentro de la red: **https://mail.domain.tld**
-
-
-Si se detiene o apaga uno de los nodos, por ejemplo mbox01, los servicios (que son ahora recursos del cluster) serán levantados en otro de los nodos. Cuando esto sucede hay debe esperar mientras levanta todos los componentes de Zimbra, los cuales demoran entre 90 y 120 segundos para estar en línea de nuevo (Java...). Se puede comprobar el estado de transferencia de los recursos mediante el siguiente comando:
+So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) mbox01 will pass all services to mbox02 or mbx03 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
 
 ```
 watch pcs status
 ```
 
-(CONTOL + C para salir)
+(CONTOL + C to exit)
 
 
 # Set LDAP Auto-Provission:
@@ -895,7 +871,7 @@ chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (mbox01 or mbox02, the one is alive and as master node in cluster) and run:
+You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (zimbra01 or zimbra02, the one is alive and as master node in cluster) and run:
 
 ```
 su - zimbra
@@ -927,7 +903,7 @@ Notify Zimbra of your installation? [Yes]
 Configuration complete - press return to exit 
 ```
 
-To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (mbox01 or mbox02, the one serving as master) and in proxy01 server do:
+To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (zimbra01 or zimbra02, the one serving as master) and in proxy01 server do:
 
 ```
 su - zimbra
@@ -993,7 +969,7 @@ Quorum information:
 corosync-quorumtool 
 ```
 
-How to change buggy chat zimlet:
+### How to change buggy chat zimlet:
 
 ```
 zmzimletctl disable com_zextras_chat_open
@@ -1004,6 +980,12 @@ zmmailboxdctl restart
 zmprov fc all
 zmmailboxdctl restart
 ```
-
+New solution:
+```
+mv /opt/zimbra/lib/ext/openchat/zal.jar /tmp
+cp -rp /opt/zimbra/lib/ext/zimbradrive/zal.jar /opt/zimbra/lib/ext/openchat/zal.jar
+su - zimbra
+zmmailboxdctl restart
+```
 
 
