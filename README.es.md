@@ -535,25 +535,20 @@ Esto quiere decir que no hay un registro MX para el hostname desde el cual se ej
 Change domain name? [Yes] <---- ENTER
 Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
+Cuando termnia este proceso, se muestra un menú en el cual es necesario como primer paso definir una contraseña de administrador de Zimbra. Para hacer eso, se escogen las sigientes opciones cuando en en diálogo aparezca el mensaje **"Address unconfigured (++) items (? - help)"**
+- Seleccionar la opción 7: **zimbra-store** en el menú principal
+- Seleccionar la opción 4: **Admin Password**
 
-Cuando Set Zimbra Admin Password:
+Allí se coloca una contraseña o se toma nota de la que Zimbra aleatoriamente propone como opción. Para regresar al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**"
 
-Cuando en en diálogo aparezca el texto **"Address unconfigured (++) items (? - help)"** hay que presionar 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
+Es necesario verificar que el dominio que se creará en el árbl LDAP coincide con el que se definió anteriormente. Si se omite este paso, es posible que los nombres difieran y los buzones de correo sean "**usuario@mbox01.domain.tld**" y no "**usuario@domain.tld**":
+- Seleccionar la opción 2: **"zimbra-ldap"** en el menú principal
+- Seleccionar la opción 3: **"Domain to create"** y verificar que coincida con el dominio raíz o cambiarlo en caso que nea necesario.
 
-After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
-
-Set Domain in LDAP:
-
-If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
-
-Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and verify if it needed to change default domain to "domain.tld" (or if already configured, it depends on your DNS)
-
-Install Zimbra server:
-
-When you have set it, return to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message.
+Se regresa al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**" y desde allí se inicia la instalación:
 
 ```
-  Select from menu, or press 'a' to apply config (? - help) a
+  Select from menu, or press 'a' to apply config (? - help) a 
   Save configuration data to a file? [Yes]
   Save config in file: [/opt/zimbra/config.21593]
   The system will be modified - continue? [No] Yes
