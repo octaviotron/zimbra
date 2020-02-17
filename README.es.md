@@ -545,12 +545,21 @@ Es necesario verificar que el dominio que se creará en el árbl LDAP coincide c
 - Seleccionar la opción 2: **"zimbra-ldap"** en el menú principal
 - Seleccionar la opción 3: **"Domain to create"** y verificar que coincida con el dominio raíz o cambiarlo en caso que nea necesario.
 
-Se regresa al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**" y desde allí se inicia la instalación:
+Se regresa al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**" y desde allí se inicia la instalación sleccionado la opción "a":
 
 ```
   Select from menu, or press 'a' to apply config (? - help) a 
+```
+
+A continuación se guarda el archivo de configuración. Es importante acá tomar nota del nombre, el cual contiene una extensión aleatoriamente asignada por el instalador
+```
   Save configuration data to a file? [Yes]
   Save config in file: [/opt/zimbra/config.21593]
+```
+
+Por último, para proceder con la instalación en el Sistema Operativo de Zimbra, se responde "Yes":
+
+```
   The system will be modified - continue? [No] Yes
 ```
 
