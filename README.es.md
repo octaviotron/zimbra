@@ -524,7 +524,7 @@ Ahora si, se puede correr el programa que configura Zimbra:
 
 Puede que aparezca un error como este:
 ```
-DNS ERROR resolving MX for zimbra01.domain.tld
+DNS ERROR resolving MX for mbox01.domain.tld
 It is suggested that the domain name have an MX record configured in DNS
 Change domain name? [Yes]
 ```
@@ -533,7 +533,7 @@ Esto quiere decir que no hay un registro MX para el hostname desde el cual se ej
 
 ```
 Change domain name? [Yes] <---- ENTER
-Create domain: [zimbra01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
+Create domain: [mbox01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
 ```
 Cuando termnia este proceso, se muestra un menú en el cual es necesario como primer paso definir una contraseña de administrador de Zimbra. Para hacer eso, se escogen las sigientes opciones cuando en en diálogo aparezca el mensaje **"Address unconfigured (++) items (? - help)"**
 - Seleccionar la opción 7: **zimbra-store** en el menú principal
@@ -572,14 +572,14 @@ Zimbra will start to install, go for another coffe, Java presents it:
 
 Now, copy the created config file to the other node:
 
-scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
+scp /opt/zimbra/config.21593 mbox02.domain.tld:/root/zmconfig.log
 
 
 Now, delete "**mail.domain.tld**" line in /etc/hosts
 
 ## Install the mbox02 and mbox03 nodes
 
-**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
+**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in mbox02:
 
 ```
 pcs cluster stop mbox02.domain.tld
@@ -656,7 +656,7 @@ mkdir /opt/zimbra
 
 And delete the /etc/hosts line with "**mail.domain.tld**" definition
 
-Now, restore cluster in zimbra02:
+Now, restore cluster in mbox02:
 
 ```
 pcs cluster start mbox02.domain.tld
@@ -880,7 +880,7 @@ chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (zimbra01 or zimbra02, the one is alive and as master node in cluster) and run:
+You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (mbox01 or mbox02, the one is alive and as master node in cluster) and run:
 
 ```
 su - zimbra
@@ -912,7 +912,7 @@ Notify Zimbra of your installation? [Yes]
 Configuration complete - press return to exit 
 ```
 
-To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (zimbra01 or zimbra02, the one serving as master) and in proxy01 server do:
+To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (mbox01 or mbox02, the one serving as master) and in proxy01 server do:
 
 ```
 su - zimbra
