@@ -974,7 +974,7 @@ Quorum information:
 corosync-quorumtool 
 ```
 
-How to change buggy chat zimlet:
+### How to change buggy chat zimlet:
 
 ```
 zmzimletctl disable com_zextras_chat_open
@@ -985,6 +985,12 @@ zmmailboxdctl restart
 zmprov fc all
 zmmailboxdctl restart
 ```
-
+New solution:
+```
+mv /opt/zimbra/lib/ext/openchat/zal.jar /tmp
+cp -rp /opt/zimbra/lib/ext/zimbradrive/zal.jar /opt/zimbra/lib/ext/openchat/zal.jar
+su - zimbra
+zmmailboxdctl restart
+```
 
 
