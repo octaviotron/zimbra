@@ -529,7 +529,7 @@ It is suggested that the domain name have an MX record configured in DNS
 Change domain name? [Yes]
 ```
 
-Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo. Se debe colocar entonces el nombre de dominio correcto para que los buzones tengan una dirección "usuario@dominio.tld" y no "usuario@zimbra01.dominio.tld". Este diálogo debe responderse de la siguiente manera:
+Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo.
 
 ```
 Change domain name? [Yes] <---- ENTER
