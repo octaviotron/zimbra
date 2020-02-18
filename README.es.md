@@ -669,25 +669,23 @@ watch pcs status
 
 (CONTOL + C para salir)
 
+# Auto-Provisión de cuentas vía LDAP (Opcional)
 
-# Set LDAP Auto-Provission:
+Si se desea usar un Arbol LDAP externo para la autenticación de cuentas de usuario, se deben seguir los siguientes pasos. En este ejemplo se usa la estructura de un servidor FreeIPA, pero para cualquier otro caso es necesario tener los mismos datos:
 
-This step is required to have all external LDAP accounts available in Zimbra MailBox. In this example we use a FreeIPA server, but any LDAP can do this job, as well you know some important configuration fields:
+- La URL del servicio LDAP, en este ejemplo **ldap://freeipa.domain.tld:389**
+- La base de búsqueda (LDAP Search Base) donde pueden ser encontradas las cuentas, por ejemplo **cn=accounts,dc=domain,dc=tld**
+- El filtro LDAP con el cual se obtiene una cuenta. Es importante que este filtro arroje siempre un solo resultado: **(uid=%u)**
 
-- The URL of the LDAP, in this example **ldap://freeipa.domain.tld:389**
-- The LDAP Search Base where accounts data can be found. In this example **cn=accounts,dc=domain,dc=tld**
-- The filter for finding the account. It is important to ensure the expresion filter to provide only one result. in this example **(uid=%u)**
-
-So, Open **https://mail.domain.tld:7071** to get into Zimbra Admin Interface. then go to **Admin > Configuration > Domain**, click in **domain.tld** in domain list. Go to **Authentication** in the left menu and click on the **gear icon** on the top right corner and select **Autentication**. Now follow the dialogs, giving the following answers:
-
-- **Use external LDAP** (click "next")
-- Put the LDAP (FreeIPA) hostname or IP: **freeipa.domain.tld**
-- Put **(uid=%u)** into Filter Option (remember it works in FreeIPA, modify it to fit your LDAP tree)
-- Put **cn=users,cn=accounts,dc=domain,dc=tld** on Base DN (idem: change domain components to fit yours)
-- **Next**
-- Optionally put DN variables if you have configured it in your LDAP server
-- Test your LDAP connection using a existing user/password account in your LDAP
-- **Finnish** the auth config dialog
+Para configurar la auto-provisión se abre la interfaz de administración de Zimbra **https://mail.domain.tld:7071** y se siguen los siguientes pasos:
+- Ir a **Admin > Configuration > Domain** y seleccionar el dominio, en nuestro caso **domain.tld**
+- Ir a **Authentication** en el menú de la izquierda y luego presionar el **ícono en forma de engranaje** en la esquina superior derecha de la ventana y allí seleccionar **Autentication**
+- En la ventana emergente que se abrirá se seleeciona la opción **Use external LDAP** y se da click en **siguiente**
+- Colocar el nombre de hos o la IP del servicio LDAP: **freeipa.domain.tld**
+- Colocar **(uid=%u)** en el campo donde pide el filtro LDAP
+- Colocar **cn=users,cn=accounts,dc=domain,dc=tld** en el campo "Base DN" y seleccionar **siguiente**
+- Probar los valores suministrados usando el botón de pruebas, donde habrá que suministrar un usuario y contraeeñas válidos en el LDAP
+- Presionar **Finnish** en el diálogo de configuración
 
 Now, open a root shell in Zimbra server and write next commands:
 
