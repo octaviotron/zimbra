@@ -687,7 +687,7 @@ Para configurar la auto-provisión se abre la interfaz de administración de Zim
 - Probar los valores suministrados usando el botón de pruebas, donde habrá que suministrar un usuario y contraeeñas válidos en el LDAP
 - Presionar **Finnish** en el diálogo de configuración
 
-Now, open a root shell in Zimbra server and write next commands:
+Ahora desde una consola como root en el nodo activo del cluster se ejecuta la siguiente serie de comandos:
 
 ```
 su - zimbra
@@ -705,9 +705,9 @@ zmprov md prue.ba zimbraAutoProvNotificationBody "Your account has been auto pro
 zmprov md prue.ba zimbraAutoProvNotificationFromAddress prov-admin@prue.ba
 zmprov md prue.ba zimbraAutoProvNotificationSubject "New account auto provisioned"
 ```
-Remember to change "cn=accounts,dc=domain,dc=tld", (uid=%u)" and "ldap://freeipa.domain.tld:389" accornding to your needs, and put exactly the same you give in dialog wizard.
+Como es lógico, hay que adaptar los campos "cn=accounts,dc=domain,dc=tld", (uid=%u)" y "ldap://freeipa.domain.tld:389" siministrados acá como ejemplo para adaptarlo a las variantes del LDAP externo que se esté usando.
 
-You have now configured a Zimbra Server with external LDAP accounts. Cheers.
+Con eso se ha configurado la auto-provisión externa. Ahora se puede abrir el buzón de cualquier usuario válido registrado en el Arbol LDAP externo.
 
 ## Configure STONITH (optional)
 
