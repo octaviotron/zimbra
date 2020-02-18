@@ -473,7 +473,7 @@ Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. 
 127.0.0.1	mail.domain.tld mail 
 ```
 
-Es importante que en **/opt/zimbra** se encuentre montado el dispositivo de almacenamiento que se compartirá entyre los nodos.
+Es importante que en **/opt/zimbra** se encuentre montado (dispositivo de almacenamiento que se compartirá entre los nodos).
 
 En el primer nodo (el que se encuentra activo) se descarga e instala el Software:
 
@@ -579,28 +579,27 @@ scp /opt/zimbra/config.21593 mbox03.domain.tld:/root/zmconfig.log
 
 En este momento se debe borrar la línea temporal asignada a "**mail.domain.tld**" en el archivo **/etc/hosts**
 
-## Install the mbox02 and mbox03 nodes
+## Instalación de Zimbra en los nodos mbox02 y mbox03
 
-**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in mbox02:
+**CUIDADO:** Este procedimiento debe hacerse cuando el nodo esté en modo **OFFLINE** en el cluster, para evitar que la ruta /opt/zimbra esté siendo usada. Para detener el cluster en el nodo se ejecuta:
 
 ```
-pcs cluster stop mbox02.domain.tld
-pcs cluster stop mbox03.domain.tld
+pcs cluster stop mbox02.domain.tld   # cambiar a mbox03 cuando sea el caso
 ```
 
-Now, in each node, if you do:
-
+Para comenzar a instalar, al ejecutar el comando
 ```
 pcs status
 ```
 
-You will get a message like this:
-
+Se obtendrá como respuesta
 ```
 Error: cluster is not currently running on this node
 ```
 
-In the **offline** nodes (mbox02 and mbox03) It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
+Con el nodo en **offline** hará falta de nuevo colocar "**mail.domain.tld**" en **/etc/hosts** apuntando a **127.0.0.1**.
+
+, as we do in first server, after this install in the same way:
 
 ```
 mkdir /opt/zimbra
