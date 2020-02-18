@@ -557,25 +557,27 @@ A continuación se guarda el archivo de configuración. Es importante acá tomar
   Save config in file: [/opt/zimbra/config.21593]
 ```
 
-Por último, para proceder con la instalación en el Sistema Operativo de Zimbra, se responde "Yes":
+Para proceder con la instalación en el Sistema Operativo de Zimbra, se responde "Yes":
 
 ```
   The system will be modified - continue? [No] Yes
 ```
 
-Zimbra will start to install, go for another coffe, Java presents it:
+Zimbra se comenzará a a instalar... da tiempo para tomarse otro café, Java lo invita. Al terminar (después de haber tenido tiempo de hablar sobre religión o sobre el movimiento perpetuo en la física), saldrá el siguiente mensaje:
 
 ```
   Notify Zimbra of your installation? [Yes]
   Configuration complete - press return to exit
 ```
 
-Now, copy the created config file to the other node:
+Ahora se copia el archivo de configuración a los demás nodos:
 
+```
 scp /opt/zimbra/config.21593 mbox02.domain.tld:/root/zmconfig.log
+scp /opt/zimbra/config.21593 mbox03.domain.tld:/root/zmconfig.log
+```
 
-
-Now, delete "**mail.domain.tld**" line in /etc/hosts
+En este momento se debe borrar la línea temporal asignada a "**mail.domain.tld**" en el archivo **/etc/hosts**
 
 ## Install the mbox02 and mbox03 nodes
 
