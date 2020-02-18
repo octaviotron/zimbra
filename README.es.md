@@ -500,7 +500,7 @@ Nóese la opción "**-s**", la cual realizará la instalación sin configurar el
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] <--- opcional
+  Install zimbra-drive [Y]
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- ENTER
   Install zimbra-chat [Y]
   The system will be modified.  Continue? [N] Y
@@ -584,7 +584,8 @@ En este momento se debe borrar la línea temporal asignada a "**mail.domain.tld*
 **CUIDADO:** Este procedimiento debe hacerse cuando el nodo esté en modo **OFFLINE** en el cluster, para evitar que la ruta /opt/zimbra esté siendo usada. Para detener el cluster en el nodo se ejecuta:
 
 ```
-pcs cluster stop mbox02.domain.tld   # cambiar a mbox03 cuando sea el caso
+pcs cluster stop mbox02.domain.tld
+pcs cluster stop mbox03.domain.tld
 ```
 
 Para comenzar a instalar, al ejecutar el comando
@@ -599,7 +600,7 @@ Error: cluster is not currently running on this node
 
 Con el nodo en **offline** hará falta de nuevo colocar "**mail.domain.tld**" en **/etc/hosts** apuntando a **127.0.0.1**.
 
-, as we do in first server, after this install in the same way:
+Se procede a instalar Zimbra:
 
 ```
 mkdir /opt/zimbra
@@ -610,8 +611,7 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 ```
 
-Follow the instaler questions with the same options, make sure they are the same:
-
+Hay que asegurar que las respuestas siguientes se respondan exactamente igual que en la instalación del primer nodo:
 ```
   Do you agree with the terms of the software license agreement? [N] y
   Use Zimbra's package repository [Y]
@@ -625,15 +625,15 @@ Follow the instaler questions with the same options, make sure they are the same
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
+  Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
   Install zimbra-chat [Y] 
   The system will be modified.  Continue? [N] Y
 ```
 
-Cofee time (well... maybe it will be no good for health, tea will aso works).
+Tiempo para otro café (bueno... quizás no sea muy bueno para la salud... puede funcionar té o limonada en su lugar).
 
-When it finishes:
+Cuando finalice la instalación:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -641,13 +641,12 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
 
-And now, use the same config file (the file you copies by SCP in previous steps)
-
+En este punto, se realiza la configuración usando el archivo copiado (via SCP) desde el primer nodo:
 ```
 /opt/zimbra/libexec/zmsetup.pl -c /root/zmconfig.log
 ```
 
-After it, stop zimbra services and get rid of all files created by the installer:
+Al finalizar, se detiene Zimbra y se eliminan los archivos de /opt pues se usarán sólo los almacenados en el dispositivo común:
 ```
 /etc/init.d/zimbra stop
 killall -9 -u zimbra
@@ -655,21 +654,20 @@ mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
 
-And delete the /etc/hosts line with "**mail.domain.tld**" definition
+Se elimina la línea temporal en **/etc/hosts** que apunta a "**mail.domain.tld**".
 
-Now, restore cluster in mbox02:
-
+Ahora, se levanta el cluster en este nodo:
 ```
 pcs cluster start mbox02.domain.tld
+pcs cluster start mbox03.domain.tld
 ```
 
-So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) mbox01 will pass all services to mbox02 or mbx03 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
-
+Llegado a este punto, Zimbra trabajará en cluster activo-pasivo. Se puede hacer la prueba accediendo desde un navegador a **https://mail.domain.tld**, deteniendo (o apagando) el nodo que esté activo hará que el cluster pase todos los servicios a otro nodo. Se puede observar el proceso (que demora unos 2 minutos) de la siguiente forma:
 ```
 watch pcs status
 ```
 
-(CONTOL + C to exit)
+(CONTOL + C para salir)
 
 
 # Set LDAP Auto-Provission:
