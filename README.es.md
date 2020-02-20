@@ -709,16 +709,18 @@ Como es lógico, hay que adaptar los campos "cn=accounts,dc=domain,dc=tld", (uid
 
 Con eso se ha configurado la auto-provisión externa. Ahora se puede abrir el buzón de cualquier usuario válido registrado en el Arbol LDAP externo.
 
-## Configure STONITH (optional)
+## Configuración de Fencing (opcional)
 
-Fencing is used to make a forced node shutdown (like unplug the power cable, or press power button for 5s). This is OPTIONAL, do it only if you need to get rid a node when its status is offline:
+EL "fencing" es usado para aislar un nodo que el cluster determina que no está en condiciones de poder ser integrado y es posible, opcionalmente, configurar un método llamado STONITH para este fin.
 
-Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating System. In a root console in Proxmox host do:
+Sólo realice esta configuración si considera que es necesario desahacerse de la presencia del sistema operativo de un nodo, en caso que no cumpla con el quorum requerido:
+
+En este ejemplo, el Sistema Operativo donde corren las máquinas virtuales es el GNU/Linux de Proxmox, Se instalan en ese equipo los agentes del fencing:
 ```
 apt install fence-agents
 ```
 
-CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
+CentOS no incluye este agente, por lo cual es necesario descargar sus fuentes y compilarlas (en cada uno de los nodos del cluster):
 
 ```
 cd
