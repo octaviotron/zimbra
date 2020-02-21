@@ -744,12 +744,7 @@ En este ejemplo, hay que cambiar <proxmox_ip> por la dirección IP del Hyperviso
 
 Se obtendrá un mensaje "STATUS: OK" si todo funciona correctamente.
 
-
-
-When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a stonith rule for each node, calling Proxmox KVM system to make actions over any failing virtual machine:
-
-
-On any active node make the stonith rules:
+Cuando un nodo falla (se cuelga, pierde conexión, etc) pacemaker procederá a aislarlo (fencing). En el siguiente ejemplo están las reglas para activar STONITH en ese caso. En cualquier nodo activo se ejecuta:
 
 ```
 pcs stonith create fence_mboxs01 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
@@ -765,15 +760,7 @@ pcs stonith create fence_mbox03 fence_pve ipaddr=<proxmox_ip> inet4_only="true" 
   pcmk_host_list="mbox03.domain.tld" node_name="pve"
 ```
 
-Next, set the stonith resource to be (when possible) active in its own node. This is optional, but allows a node to call its hypervisor to shut it down, there are environments (a proxmox cluster where VM can be running in different hosts) where this si the most secure configuration to ensure sucessful stonith:
-```
-pcs constraint location fence_mbox01 prefers mbox01.domain.tld
-pcs constraint location fence_mbox02 prefers mbox02.domain.tld
-pcs constraint location fence_mbox03 prefers mbox03.domain.tld
-```
-
-For a node to be online it must see at least one more node, it is, needs a quorum > 1. Enable stonith in cluster, set a shut down action when quorum is not satisfied:
-
+Para que un nodo permanezca en línea, debe ver al menos un nodo mas. Con el siguiente comando se activa esa directiva:
 ```
 pcs stonith update fence_mbox01 action="off" --force
 pcs stonith update fence_mbox02 action="off" --force
@@ -782,25 +769,24 @@ pcs property set stonith-enabled=true
 pcs property set no-quorum-policy=suicide
 ```
 
-Resources and stonith actions are now completely configured. Restart all cluster services in all nodes (execute the following in each one):
+Finalmente, se reinicia los servicios de cluster para que la configuración tome efecto:
 ```
 systemctl enable pcsd
 systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-Now, test the cluster fencing, disconecting one node, turning off the network interface:
-
+Ahora se puede probar el fencing, suspendiendo la configuración de red en una máquina virtual (lo cual desconectará el nodo y perderá el quorum):
 ```
 systemctl stop networking
 ```
 
-Check the cluster status, when this node loose comunication with the cluster, the fencing agent will send a signal to VM hypervisor and a STOINITH will be done over this absent node. You can watch the process seeing happening changes:
+Se puede verificar así:
 
 ```
 watch pcs status
 ```
-(CONTROL-C to exit)
+(CONTROL-C para salir)
 
 
 ## Install Zimbra Proxy Servers
