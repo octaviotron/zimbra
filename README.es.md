@@ -732,17 +732,17 @@ make && make install
 fence_pve --version
 ```
 
-To test it, ask fence_pve from each cluster node:
+Para probar el funcionamiento del agente, desde los nodos del cluster se ejecuta el siguiente comando:
 ```
 /usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
 ```
 
-Change <proxmox_ip> for the KVM Hypervisor address (192.168.0.10 in the example), leave "root@pam" without changes, put root Proxmox host password in <proxmox_passowrd> and set in <vm_id> the unique VM ID, for example:
+En este ejemplo, hay que cambiar <proxmox_ip> por la dirección IP del Hypervisor KVM, "root@pam" es necesario dejarlo sin modificaciones, en <proxmox_passowrd> se coloca la contraseña de root de Hypervisor y en <vm_id> el número de identificación de la máquina virtual, por ejemplo:
 ```
-/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="ThisIsMyPasswd" --plug=101 --action=status
+/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="EstaEsMiClave" --plug=101 --action=status
 ```
 
-You will get a "STATUS: OK" message if everything is ok.
+Se obtendrá un mensaje "STATUS: OK" si todo funciona correctamente.
 
 
 
