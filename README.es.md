@@ -789,15 +789,13 @@ watch pcs status
 (CONTROL-C para salir)
 
 
-## Install Zimbra Proxy Servers
+## Instalación de Servidores Zimbra-Proxy (opcional)
 
-First, set FQDN hostname for each node, i.e:
-
+Primero, hay que configurar el nombre de la máquina para que sea un FQDN:
 ```
 hostnamectl set-hostname "proxy01.domain.tld" && exec bash 
 ```
-
-Next, verify the propper hostname and ip in /etc/hosts as well as others nodes:
+Luego, verificar que exista el proxy en **/etc/hosts** al igual que los demás nodos:
 
 ```
 192.168.0.1    mbox01.domain.tld     mbox01
@@ -811,31 +809,28 @@ Next, verify the propper hostname and ip in /etc/hosts as well as others nodes:
 192.168.0.10   proxmox.domain.tld    proxmox
 ```
 
-If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
-
+Seguidamente hay que añadir el proxy en el DNS. Si se está usando FreeIPA:
 ```
 ipa-client-install --enable-dns-updates
 ```
 
-Otherwise, insert the propper DNS record to solve "proxy01.domain.tld"
-
-
-Disable SELinux Policies in all systems:
-
-First, disable SELinux in the current running system:
-
+Desactivar la política SELinux:
 ```
 setenforce 0
 ```
 
-Then, disable it in the next boot, changing the following line in /etc/selinux/config
+Para que SELinux se desactive permanentemente, cambiar la siguiente línea en **/etc/selinux/config**:
 ```
 SELINUX=permissive
 ```
 
-Now run the installer (with -s option) and ONLY select zimbra-proxy option:
+Luego, correr el instalador de Zimbra con la opción "**-s**"
 
 ```
+mkdir /root/zimbra && cd /root/zimbra
+wget https://files.zimbra.com/downloads/8.8.15_GA/zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 
 Do you agree with the terms of the software license agreement? [N] Y
@@ -849,14 +844,12 @@ Install zimbra-store [Y] N
 Install zimbra-apache [Y] N
 Install zimbra-spell [Y] N
 Install zimbra-memcached [Y] N
-Install zimbra-proxy [Y] Y <----------------- "y" option only on this
+Install zimbra-proxy [Y] Y <----------------- "y" sólo responder Y en esta opción
 
 The system will be modified.  Continue? [N] Y
 ```
 
-In many recipes and howtos zimbra-memcached is installed with zimbra-proxy, but the truth is there is only one ziimbra-memcached needed for zimbra services to work and in all tests, only zimbra-proxy package selected gives the expected behavior. Besides the installer will download and install zimbra-memcached, only the mailboxes servers will attend tho this services requests.
-
-Wait for the install process (lemonade maybe?) and when it finnishes run:
+En muchas recetas en internet, "zimbra-memcached" es instalada junto a "zimbra-proxy", pero la verdad es que sólo una instancia de "zimbra-memcached" es necesaria y en el servicio principal ya se ha instalado uno.
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
