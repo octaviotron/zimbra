@@ -858,16 +858,15 @@ chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (mbox01 or mbox02, the one is alive and as master node in cluster) and run:
-
+Es necesario conocer la clave de acceso para Nginx. Esta clave fue generada automáticamente en el proceso de instalación de los nodos, así que será necesario conocerla. Desde uno de los nodos del cluster se ejecuta:
 ```
 su - zimbra
 zmlocalconfig -s ldap_nginx_password
 ```
 
-Now in proxy installer menu, go to Option 1 "Common Configuration" and choose the option 2 "**Ldap master host**". Put here the virtual IP hostname: "**mail.domain.tld**"
+Ahora, en el instalador del proxy, se accede a la opción 1 "**Common Configuration**" y allí se va a la opción 2 "**Ldap master host**". Allí se coloca el nombre de host asignado a la IP Virtual: "**mail.domain.tld**"
 
-Then choose option 4 "Ldap Admin password" and put the one you get from mailboxes servers. When set, it will automaticly connect and retrieve all zimbra services configuration via LDAP:
+Posteriormente, se accede a la opción 4 "**Ldap Admin password**" y se proporciona la clave obtenida el el proceso anterior. Hecho esto el instalador se conectará y tomará del servicio LDAP principal todas las configuraciones necesarias:
 
 ```
 Setting defaults from ldap...done.
