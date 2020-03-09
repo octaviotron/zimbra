@@ -1,57 +1,57 @@
-# Zimbra Community Suite Cluster in Proxmox KVM hosts
+# Cluster de Zimbra Community Suite en hosts KVM (Proxmox)
 
-(Versión en español en https://github.com/octaviotron/zimbra/blob/master/README.es.md)
+(english version in https://github.com/octaviotron/zimbra/blob/master/README.en.md)
 
-This documentation is intended to have a full guide of how to install Zimbra (8.8.15 LTS) in a corosync/pacemaker Proxmox KVM cluster. It includes Stonith and Fencing configuration, as well as account Auto-Provision from external LDAP.
+Esta documentación es una guía completa de cómo instalar Zimbra (versión LTS 8.8.15) en un cluster corosync/pacemaker de máquinas virtuales en Proxmox. Incluye los pasos necesarios para permitir auto-provisión de cuentas usando un árbol LDAP externo e instrucciones para configurar Fencing (STONITH).
 
-## Foreword
+## Prefacio
 
-The community version of Zimbra (ZCS) does not provide clustering functions, there si no any information in the official documentation for doing mailbox clustering, there is a section dedicated to make multi-master LDAP but no for other zimlets.
+La versión comunitaria de Zimbra (ZCS) no provee funciones para trabajar en cluster. No existe documentación oficial para que los mensajes almacenados (zimlet mailboxd) tenga replicación y alta disponibilidad. La documentación solo trae instrucciones para hacer una configuración multi-maestro del servicio LDAP lo cual es insuficiente para un ambiente seguro de producción.
 
-The the hack for achieving it, is to configure 3 GNU/Linux cluster nodes and add Zimbra services as a resource. Lucky, all zimbra files are in /opt/zimbra, so making this path as a floating mountpoint between nodes and ensuring no split-brain situation is possible (no more than one node reading and writing in this mountpoint) does the trick.
+La solución propuesta en esta documentación consiste en configurar un cluster de 3 nodos donde el servicio Zimbra sea un recurso de pacemaker. Por suerte todos los archivos necesarios para que funcione Zimbra están en /opt/zimbra de manera que creando en esa ruta un punto de montaje a un recurso de almacenamiento compartido entre los nodos y asegurando que sólo uno de estos pueda leer y escribir (evitando una situación de split-brain) se hace el truco de clusterizar Zimbra.
 
-## Architecture Design
+## Diseño de Arquitectura
 
-The entire schema is as following image:
+El panorama completo de la solución propuesta en este documento se puede obaservar en la siguiente ilustración:
 
 ![diagrama](imgs/Diagrama2.png)
 
-This is our sample IP addreses:
+Las siguientes son las direcciones IP y nombres de hosts que usaremos como ejemplo:
 
 ```
 mbox01.domain.tld  192.168.0.1
 mbox02.domain.tld  192.168.0.2
 mbox03.domain.tld  192.168.0.3
-mbox.domain.tld    192.168.0.4  <--- mbox cluster virtual ip
+mbox.domain.tld    192.168.0.4  <--- IP virtual del Cluster de mailboxd
 proxy01.domin.tld  192.168.0.5
 proxy02.domin.tld  192.168.0.6
 proxy03.domin.tld  192.168.0.7
-mail.domian.tld    192.168.0.8  <--- proxy round-robin virtual ip
+mail.domian.tld    192.168.0.8  <--- IP virtual en roud-robin para los proxies
 
-proxmox.domain.tld 192.168.0.10 <--- Proxmox KVM host
+proxmox.domain.tld 192.168.0.10 <--- Hypervisor Proxmox
 
 ```
 
-## Prepare Proxmox OS
+## Preparación del Sistema Operativo donde corre Proxmox
 
-You need to add a shared SAN/NAS storage resource enabled as a device for each virtual host you are going to configure as cluster. If you are using another sotrage resource, maybe the web UI does not let to make this, you will need to add it manually:
+Es necesaria una unidad de almacenamiento SAN o NAS añadida como un dispositivo en cada máquiona virtual del cluster. Si se usa otro recurso (disco RAID compartido, montaje NFS, etc) es posible que la interfaz web de Proxmox no permita añadirlo a mas de una máquina virtual. en ese caso para hacerlo manualmente se pueden ejecutar las siguientes instrucciones:
 
 ```
 cd /etc/pve/qemu-server/
 qm set 101 -ide1 /dev/sdX
 ```
 
-Change "**101**" for the VM ID in proxmox and **/dev/sdX** (rememeber to put the right one here) for the SAN/NAS device you want to link to VMs.
+Notese que hay que cambiar "**101**" por el ID de la máquina virtual que aplique en su caso y **/dev/sdX** por el dispositivo de almacenamiento que se ve desde el sistema operativo donde corre Proxmox.
 
-**NOTE:** it is needed to have this storage device enabled BEFORE nodes are active. Ensure to have it available in VMs when you boot them.
+**NOTA:** es necesario que esté habilitado este recurso de almacenamiento **ANTES** de proceder a hacer la instalación del cluster. Se debe asegurar ANTES que las máquinas virtuales al levantar vean el dispositivo para poder proseguir con los siguientes pasos.
 
-## MBOX Cluster Virtual Machines OS Preparation
+## Preparación del Sistema Operativo de los nodos del cluster
 
-The following steps is needed to be done on all "cluster nodes", it is: mbox01, mbox02 and mbox03 hosts. It is important to have at minimum 3 cluster nodes: in a 2 cluster scenario there is no way to (completely) avoid a split-brain situation.
+El proceso siguiente debe realizarse simultáneamente en todos los nodos del cluster. Es muy importante que el número de nodos sea exactamente 3 para que las instrucciones de esta documentación garanticen (completamente) que en su entorno resultante no habrá una situación de split-brain. Muchas recetas en internet (la mayoría de ellas) muestran como montar un cluster con sólo 2 nodos (inhabilitando el quorum) y eso tarde o temprano se traducirá en la corrupción de la data.
 
-In this example all virtual hosts are a fresh-new install of CentOS 7, with only base packages. 
+Se usará en este ejemplo CentOS 7 recién instalado en cada nodo, sólo con los paquetes básicos y escenciales.
 
-This are common steps needed to be executed on each node (on all of them):
+En cada uno de los nodos se deben ejecutar los siguientes comandos, para añadir repositorios adicionales y actualizar el listado de paqquetes disponibles para ser instalados:
 
 ```
 rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -60,7 +60,7 @@ yum -y update
 yum -y upgrade
 ```
 
-Install needed packages in all nodes too:
+En cada uno de los nodos, se instalan todos los paquetes necesarios:
 
 ```
 yum -y install ipa-client unzip net-tools sysstat openssh-clients \
@@ -69,25 +69,26 @@ yum -y install ipa-client unzip net-tools sysstat openssh-clients \
     git gcc make automake autoconf libtool pexpect python-requests
 ```
 
-It is important to set an FQDN hostname. In mbox01 node do:
+Es muy importante que cada nodo tenga asignado un FQDN. En el nodo "mbox01":
 
 ```
 hostnamectl set-hostname "mbox01.domain.tld" && exec bash 
 ```
+(por supuesto, debe sustituir "domain.tld" por el nombre de su dominio)
 
-In mbox02 do:
+En "mbox02":
 
 ```
 hostnamectl set-hostname "mbox02.domain.tld" && exec bash 
 ```
 
-And in mbox03 do:
+En "mbox03":
 
 ```
 hostnamectl set-hostname "mbox03.domain.tld" && exec bash 
 ```
 
-Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS service are unavailable, this helps to keep the cluster working:
+Seguidamente, se deben colocar las direcciones de los demás componentes del sistema de correo, de manera que ante un fallo del DNS continúen funcionando los servicios y el cluster. Esto debe estar en **/etc/hosts** en cada uno de los nodos:
 
 ```
 192.168.0.1    mbox01.domain.tld     mbox01
@@ -101,61 +102,65 @@ Next, put the propper hostnames and ip in **/etc/hosts** in all nodes, when DNS 
 192.168.0.10   proxmox.domain.tld    proxmox
 ```
 
-
-Disable SELinux Policies in all nodes:
+Es necesario, en cada uno de los nodos, deshabilitar las políticas SELinux que trae CentOS por defecto:
 ```
 setenforce 0
 ```
 
-Also disable SELinux for next reboots, changing the following line in **/etc/selinux/config** in all nodes:
+Para que SELinux quede en ese estado en los próximos inicios del sistema operativo, es necesario cambiar la siguiente línea del archivo **/etc/selinux/config** en cada uno de los nodos:
 ```
 SELINUX=permissive
 ```
 
-Enable ports in Firewall:
+En cada uno de los nodos, el cortafuegos necesita tener habilitados los puertos necesarios:
+
 ```
 firewall-cmd --permanent --add-port={25,80,110,143,389,443,465,587,993,995,5222,5223,9071,7071}/tcp
 firewall-cmd --reload
 ```
 
-It is possible you need some other ports, depending services you want to install. In this case you can temporary disable the firewall for testing and later decide which services you need to add. To make this in all nodes:
+Dependiendo de cada caso, es posible que sea necesario habilitar otros puertos adicionales o el proceso puede fallar, se puede por tanto inahbilitar temporalmente el cortafuegos de la siguiente manera en cada nodo:
 
 ```
 systemctl stop firewalld
 systemctl disable firewalld
 ```
 
-Remember later, when you finnish all, to enable it again:
+Al terminar todos los pasos de esta documentación, es importante asegurar cuáles puertos nos realmente necesarios tener abiertos y volver a levantar el servicio:
+
 ```
 systemctl start firewalld
 systemctl enable firewalld
 ```
 
-Zimbra needs to have SMTP ports available and CentOS (as well as others GNU/Linux distributions) have a postfix service, so it need to be disabled in order to continue:
+Es necesario que no haya ningún otro servicio activo que use el puerto 25/tcp (SNMP) y CentOS por defecto provee un servicio postfix para el manejo de la mensajería interna del sistema operativo, así que es necesario detenerlo e inhabilitarlo en cada uno de los nodos:
 ```
 systemctl stop postfix
 systemctl disable postfix
 ```
 
-Also, all nodes needs to have a pointer in DNS resolution, so ensure your name server has propper records to each node. If you are using FreeIPA you can add it this way:
+Todos los clientes deben encontrar la dirección IP de los servicios, por lo tanto debe haber un registro en el DNS de cada uno de los nodos del cluster. Esto debe hacerse manualmente para cada caso.
+
+Si se usa FreeIPA para lograr esta resolución de nombres, en cada nodo debe realizarse el enroll mediante el siguiente comando:
 ```
 ipa-client-install --enable-dns-updates
 ```
 
-
-Set the "hacluster" account password in al nodes:
+Para incorporar cada nodo como miembro del cluster se debe colocar en cada uno la misma contraseña para el usuario "hacluster":
 
 ```
-echo "hacluster:your_password"|chpasswd
+echo "hacluster:tu_password"|chpasswd
 ```
-(change "your_password" and remember it for later)
+Se debe cambiar "tu_password" por alguna contraseña arbitraria la cual debe ser la misma en todos los nodos.
 
-On all nodes start cluster system service:
+
+Seguidamente en cada nodo se levanta el cluster:
 ```
 systemctl start pcsd
 systemctl status pcsd
 ```
-Corosync service has a bug in CentOS 7 which sometimes starts corosync too early when some needed system resources are not already available. To avoid this, add a 3 seconds delay before service starts, to do this, in all nodes modify **/usr/lib/systemd/system/corosync.service** file adding "**ExecStartPre=/usr/bin/sleep 3**" after "**[service]**" section. The file must be as follow on all nodes:
+
+El sistema de cluster en CentOS presenta un mal funcionamiento en algunos casos, sobre todo cuando corre en hardware con procesadores muy veloces, por lo cual es necesario retrasar levemente su inicio de manera de asegurar que a otros servicios les de tiempo de levantar antes de ser consiltados por corosync. Esto se logra modificando el archivo **/usr/lib/systemd/system/corosync.service**, añadiendo la directiva "**ExecStartPre=/usr/bin/sleep 3**" en la sección "**[service]**" del script en systemd. Esta sección del archivo debe quedar así entonces en todos los nodos:
 
 ```
 [Service]
@@ -163,89 +168,82 @@ ExecStartPre=/usr/bin/sleep 3
 ExecStart=/usr/share/corosync/corosync start
 ExecStop=/usr/share/corosync/corosync stop
 Type=forking
-...
 ```
 
-And in each node reload daemons after modify this file:
+Para que el cambio surja efecto, luego de haber hecho la modificación debe renovarse la configuración que reside en memoria en cada uno de los nodos:
 
 ```
 systemctl daemon-reload
 ```
 
-## Create MBOX cluster
+## Creación de los recursos del cluster
 
 
-On any active node make auth keys share between nodes:
+En uno solo de los nodos, se autorizan los hosts que componen el cluster:
+
 ```
 pcs cluster auth mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
-This will ask for a user and a password. Put "**hacluster**" as user and the password you set in previous steps.
+La instrucción anterior pedirá un usuario, donde se debe colocar "**hacluster**" y seguidamente se solicitará una contraseña, donde debe colocarse la suministrada en los pasos anteriores (donde se sustituyo "tu_password").
 
 
-Set a name for the cluster:
+Se debe suministrar un nomnre al cluster ("cluster_zimbra" en este ejemplo), esto se hace en uno solo de los nodos:
 
 ```
 pcs cluster setup --name cluster_zimbra mbox01.domain.tld mbox02.domain.tld mbox03.domain.tld
 ```
 
-Start the cluster:
+De la misma manera en uno de los nodos se levanta el cluster:
 ```
 pcs cluster start --all
 ```
 
-To check cluster status you can see the output of this commands:
+Con las siguientes instrucciones se puede verificar el estado de los componentes que hasta ahora se han configurado en cluster, estos comandos deben dar la misma salida al ejecutarse en cualquiera de los nodos:
 
 ```
 pcs status cluster
-corosync-cmapctl | grep members
 pcs status corosync
 ```
 
-Disable stonith (see in further section how to enable it):
+En el diseño actual no se considera necesario configurar el fencing de los nodos, por lo cual se desactiva STONITH. En una sección posterior de este documento se explica detalladamente cómo habilitarlo en caso que se considere realmente bnecesario:
 ```
 pcs property set stonith-enabled=false
-pcs property
 ```
 
-## Create cluster Virtual IP resource
+## Definición de la IP virtual del cluster
 
-Now, create a VIRTUAL IP resource:
+Para crear el recurso de IP virtual, se ejecuta el siguiente comando en uno de los nodos del cluster:
 ```
 pcs resource create virtual_ip ocf:heartbeat:IPaddr2 ip=192.168.0.4 cidr_netmask=32 nic=eth0:0 op monitor interval=30s
 ```
 
-We are using "eth0" here to create "eth0:0" alias. Please verify your network interface is this or rename as needed.
+En este caso se indica "eth0" como la interfaz para crear el alias "et0:0" que tendrá asociada la IP Virtual. Se debe verificar que es "eth0" el nombre del dispositivo de red que usa el Sistema Operativo del nodo.
 
-Verify the creation of the virtual IP:
+Se verifica que se ha creado satisfactoriamente este recusro ejecutando el siguiente comando:
 ```
 pcs status resources
 ```
 
-You will get a message with a line like this:
+En la salida obtenida se verá una línea similar a esta, indicando que el recurso ha sido asingado al host mbox01:
 ```
 virtual_ip     (ocf::heartbeat:IPaddr2):       Started mbox01.domain.tls
 ```
 
-This tells mbox01 host has the virtual ip assigned. you can ping and open a SSH session to verify it.
 
+# Creación del recurso en el cluster para el servicio ZIMBRA
 
-# Create ZIMBRA cluster daemon control resource
-
-Create **/usr/lib/ocf/resource.d/heartbeat/zimbractl** file with this into it:
+Se crea un archivo **/usr/lib/ocf/resource.d/heartbeat/zimbractl** con el siguiente contenido:
 
 
 ```bash
 #!/bin/sh
 #
 # Resource script for Zimbra
-#
 # Description:  Manages Zimbra as an OCF resource in
 #               an high-availability setup.
-#
 # Author:       RRMP <tigerlinux@gmail.com>
 # License:      GNU General Public License (GPL)
-#
 #
 #       usage: $0 {start|stop|reload|monitor|validate-all|meta-data}
 #       The "start" arg starts a Zimbra instance
@@ -406,24 +404,24 @@ validate-all)
 esac
 ```
 
-And give 755 permission:
+Creado este archivo se le otorgan permisos de ejecución:
 
 ```
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Copy to the other nodes:
+Seguidamente se copia el archivo en los otros nodos:
 ```
 scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox02.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
 scp /usr/lib/ocf/resource.d/heartbeat/zimbractl root@mbox03.domain.tld:/usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-And in each node do:
+Luego en cada nodo se le deben otorgar permisos de ejecución:
 ```
 chmod 755 /usr/lib/ocf/resource.d/heartbeat/zimbractl
 ```
 
-Create "zimbractl" resource for Pacemaker cluster and ensure it will be present only if virtual IP is activated:
+Para añadir el recurso (llamdo "zimbractl" en este ejemplo) se ejecutan las siguientes instrucciones:
 ```
 pcs resource create svczimbra ocf:heartbeat:zimbractl op monitor interval=30s
 pcs resource op remove svczimbra monitor
@@ -431,22 +429,22 @@ pcs constraint colocation add svczimbra virtual_ip INFINITY
 pcs constraint order virtual_ip then svczimbra
 ```
 
-Check if it is loaded and active as a cluster resource:
+Se puede comprobar que se ha cargado el recurso mediente el siguiente comando:
 
 ```
 pcs status
 ```
 
 
-# Create shared filesystem resource
+# Definición de la ruta con los archivos comunes
 
-The **/opt/zimbra** path will be a shared resources between nodes. Create it first:
+La ruta donde residen todos los archivos que necesitan los servicios relacionados con Zimbra se encuentran en **/opt/zimbra**. Se crea este directorio:
 
 ```
 mkdir -p /opt/zimbra
 ```
 
-Next, make **/opt/zimbra** a filesystem cluster resource, so it can be mounted (and umounted) only in the active cluster node. Do it only first time on online cluster node:
+Ese directorio debe crearse como un recurso del cluster, de manera que sólo el nodo activo lo tendrá montado. Esto debe hacerse **sólo en el nodo activo**:
 
 ```
 cd /
@@ -457,9 +455,9 @@ pcs -f add_fs constraint order zimbra_fs then svczimbra
 pcs cluster cib-push add_fs
 ```
 
-Remember to change "**/dev/sdX**" to fit the propper device.
+NOTA: es necesario cambiar "**/dev/sdX**" para ajustarlo al nombre correcto del dispositivo de almacenamiento.
 
-And on each node enable services:
+Finalmente, se concluye la configuración del cluster habilitando los servicios permanentemente:
 
 ```
 systemctl enable pcsd
@@ -467,21 +465,17 @@ systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-## Installing Zimbra
+## Instalación de Zimbra
 
-Zimbra Community Suite is not intended to work as a cluster. There is no any official documentation with guidelines to do that. So, we need to make a hack: we are going to install ZCS as usually, in the normal way in the first cluster node. It will set the Operating Systen environment (users, permissions, etc) and in /opt/zimbra will be all services files. Well... in the other two nodes we will make the same, but ignoring all /opt/zimbra stuff, because we will use only first one (using SAN/NAS storage)
-
-
-It is needed to make temporary the address resolution of "**mail.domain.tld**" to point to this server, so change /etc/hosts line to:
-
+Se realizará la instalación de los pauetes de Zimbra Community Suite v8.8.15. Para eso, es necesario crear una entrada temporal en **/etc/hosts** que apunte a "**mail.domain.tld**":
 
 ```
 127.0.0.1	mail.domain.tld mail 
 ```
 
-And remember having /opt/zimbra as a mountpoint to your NAS or SAN storage:
+Es importante que en **/opt/zimbra** se encuentre montado (dispositivo de almacenamiento que se compartirá entre los nodos).
 
-Download and Install the Software:
+En el primer nodo (el que se encuentra activo) se descarga e instala el Software:
 
 ```
 mkdir /root/zimbra && cd /root/zimbra
@@ -490,9 +484,8 @@ tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
 cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 ```
-Note "-s" option: it will install the software without configure it. We will make it later.
 
-The instaler will ask you several questions, choose the following options:
+Nóese la opción "**-s**", la cual realizará la instalación sin configurar el sistema, lo cual se realizará posteriormente. El instalador realizará unas preguntas, que deben responderse como se especifican a continuación:
 
 ```
   Do you agree with the terms of the software license agreement? [N] y
@@ -507,16 +500,15 @@ The instaler will ask you several questions, choose the following options:
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
-  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
+  Install zimbra-drive [Y]
+  Install zimbra-imapd (BETA - for evaluation only) [N]     <--- ENTER
   Install zimbra-chat [Y]
   The system will be modified.  Continue? [N] Y
 ```
 
-Zimbra will download updates and pathces, go for a coffe, because it is Java and all Java stuff always delays a lot, even running simple procecess.
+Despùés de seleccionar la última de esas opciones, se descargarán y actualizarán los paquetes necesarios. En este punto puede ir por un café, porque Zimbra usa Java y todo lo que usa Java tarda mucho tiempo y consume mucho procesador y memoria, hasta para ejecutar los procesos mas simples.
 
-
-Fix CA paths:
+Antes de configurar Zimbra, es necesario corregir la ruta en la cual se encuentran la unidad certificadora (CA):
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -524,81 +516,91 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
 
-
-Then run the installer configuration:
+Ahora si, se puede correr el programa que configura Zimbra:
 
 ```
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You may get an error message like this, informing your about resolving MX record, so you will need to change it an give the right domain name. Rememeber MX record points to mail.domain.tld and not zimbra01.domain.tld:
-
+Puede que aparezca un error como este:
 ```
-DNS ERROR resolving MX for zimbra01.domain.tld
+DNS ERROR resolving MX for mbox01.domain.tld
 It is suggested that the domain name have an MX record configured in DNS
-Change domain name? [Yes] <---- press ENTER
-Create domain: [zimbra01.domain.tld] domain.tld <----- your MX host here
+Change domain name? [Yes]
 ```
 
-Set Zimbra Admin Password:
-
-When prompt shows text **"Address unconfigured (++) items (? - help)"** press 7 **zimbra-store** and ENTER, then 4 **Admin Password** and ENTER
-
-After it press ENTER in "Select, or 'r' for previous menu [r]" prompt message to go to main menu
-
-Set Domain in LDAP:
-
-If you skip this step, your domain name will be "zimbra01.domain.tld" so mailboxes will have addresses like "user@zimbra01.domain.tld" and you maybe preffer to have "user@domain.tld" mail accounts instead, so change the default config:
-
-Go to option 2 **"zimbra-ldap"** and then option 3 **"Domain to create"** and verify if it needed to change default domain to "domain.tld" (or if already configured, it depends on your DNS)
-
-Install Zimbra server:
-
-When you have set it, return to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message.
+Esto quiere decir que no hay un registro MX para el hostname desde el cual se ejecuta el instalador que por defecto lo toma como el dominio de correo.
 
 ```
-  Select from menu, or press 'a' to apply config (? - help) a
+Change domain name? [Yes] <---- ENTER
+Create domain: [mbox01.domain.tld] domain.tld <----- Se coloca acá el dominio (sin nombre de host)
+```
+Cuando termnia este proceso, se muestra un menú en el cual es necesario como primer paso definir una contraseña de administrador de Zimbra. Para hacer eso, se escogen las sigientes opciones cuando en en diálogo aparezca el mensaje **"Address unconfigured (++) items (? - help)"**
+- Seleccionar la opción 7: **zimbra-store** en el menú principal
+- Seleccionar la opción 4: **Admin Password**
+
+Allí se coloca una contraseña o se toma nota de la que Zimbra aleatoriamente propone como opción. Para regresar al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**"
+
+Es necesario verificar que el dominio que se creará en el árbl LDAP coincide con el que se definió anteriormente. Si se omite este paso, es posible que los nombres difieran y los buzones de correo sean "**usuario@mbox01.domain.tld**" y no "**usuario@domain.tld**":
+- Seleccionar la opción 2: **"zimbra-ldap"** en el menú principal
+- Seleccionar la opción 3: **"Domain to create"** y verificar que coincida con el dominio raíz o cambiarlo en caso que nea necesario.
+
+Se regresa al menú principal se presiona ENTER en el diálogo "**Select, or 'r' for previous menu [r]" prompt message to go to main menu**" y desde allí se inicia la instalación sleccionado la opción "a":
+
+```
+  Select from menu, or press 'a' to apply config (? - help) a 
+```
+
+A continuación se guarda el archivo de configuración. Es importante acá tomar nota del nombre, el cual contiene una extensión aleatoriamente asignada por el instalador
+```
   Save configuration data to a file? [Yes]
   Save config in file: [/opt/zimbra/config.21593]
+```
+
+Para proceder con la instalación en el Sistema Operativo de Zimbra, se responde "Yes":
+
+```
   The system will be modified - continue? [No] Yes
 ```
 
-Zimbra will start to install, go for another coffe, Java presents it:
+Zimbra se comenzará a a instalar... da tiempo para tomarse otro café, Java lo invita. Al terminar (después de haber tenido tiempo de hablar sobre religión o sobre el movimiento perpetuo en la física), saldrá el siguiente mensaje:
 
 ```
   Notify Zimbra of your installation? [Yes]
   Configuration complete - press return to exit
 ```
 
-Now, copy the created config file to the other node:
+Ahora se copia el archivo de configuración a los demás nodos:
 
-scp /opt/zimbra/config.21593 zimbra02.domain.tld:/root/zmconfig.log
+```
+scp /opt/zimbra/config.21593 mbox02.domain.tld:/root/zmconfig.log
+scp /opt/zimbra/config.21593 mbox03.domain.tld:/root/zmconfig.log
+```
 
+En este momento se debe borrar la línea temporal asignada a "**mail.domain.tld**" en el archivo **/etc/hosts**
 
-Now, delete "**mail.domain.tld**" line in /etc/hosts
+## Instalación de Zimbra en los nodos mbox02 y mbox03
 
-## Install the mbox02 and mbox03 nodes
-
-**WARNING:** This procedure MUST be done with mbox02 and mbox03 in **OFFLINE** mode in cluster. This can be done stopping all cluster services in zimbra02:
+**CUIDADO:** Este procedimiento debe hacerse cuando el nodo esté en modo **OFFLINE** en el cluster, para evitar que la ruta /opt/zimbra esté siendo usada. Para detener el cluster en el nodo se ejecuta:
 
 ```
 pcs cluster stop mbox02.domain.tld
 pcs cluster stop mbox03.domain.tld
 ```
 
-Now, in each node, if you do:
-
+Para comenzar a instalar, al ejecutar el comando
 ```
 pcs status
 ```
 
-You will get a message like this:
-
+Se obtendrá como respuesta
 ```
 Error: cluster is not currently running on this node
 ```
 
-In the **offline** nodes (mbox02 and mbox03) It is needed again to put "mail.domain.tld" in /etc/hosts, as we do in first server, after this install in the same way:
+Con el nodo en **offline** hará falta de nuevo colocar "**mail.domain.tld**" en **/etc/hosts** apuntando a **127.0.0.1**.
+
+Se procede a instalar Zimbra:
 
 ```
 mkdir /opt/zimbra
@@ -609,8 +611,7 @@ cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 ```
 
-Follow the instaler questions with the same options, make sure they are the same:
-
+Hay que asegurar que las respuestas siguientes se respondan exactamente igual que en la instalación del primer nodo:
 ```
   Do you agree with the terms of the software license agreement? [N] y
   Use Zimbra's package repository [Y]
@@ -624,15 +625,15 @@ Follow the instaler questions with the same options, make sure they are the same
   Install zimbra-spell [Y] 
   Install zimbra-memcached [Y] 
   Install zimbra-proxy [Y] 
-  Install zimbra-drive [N] 
+  Install zimbra-drive [Y] 
   Install zimbra-imapd (BETA - for evaluation only) [N]     <--- press ENTER
   Install zimbra-chat [Y] 
   The system will be modified.  Continue? [N] Y
 ```
 
-Cofee time (well... maybe it will be no good for health, tea will aso works).
+Tiempo para otro café (bueno... quizás no sea muy bueno para la salud... puede funcionar té o limonada en su lugar).
 
-When it finishes:
+Cuando finalice la instalación:
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -640,13 +641,12 @@ ln -s /opt/zimbra/common/etc/java/cacerts /opt/zimbra/java/jre/lib/security/cace
 chown -R  zimbra.zimbra /opt/zimbra/java
 ```
 
-And now, use the same config file (the file you copies by SCP in previous steps)
-
+En este punto, se realiza la configuración usando el archivo copiado (via SCP) desde el primer nodo:
 ```
 /opt/zimbra/libexec/zmsetup.pl -c /root/zmconfig.log
 ```
 
-After it, stop zimbra services and get rid of all files created by the installer:
+Al finalizar, se detiene Zimbra y se eliminan los archivos de /opt pues se usarán sólo los almacenados en el dispositivo común:
 ```
 /etc/init.d/zimbra stop
 killall -9 -u zimbra
@@ -654,43 +654,40 @@ mv /opt/zimbra /root/old-zimbra
 mkdir /opt/zimbra
 ```
 
-And delete the /etc/hosts line with "**mail.domain.tld**" definition
+Se elimina la línea temporal en **/etc/hosts** que apunta a "**mail.domain.tld**".
 
-Now, restore cluster in zimbra02:
-
+Ahora, se levanta el cluster en este nodo:
 ```
 pcs cluster start mbox02.domain.tld
+pcs cluster start mbox03.domain.tld
 ```
 
-So far, we have configured Zimbra to work as a active-passive cluster. It can be probed opening https://mail.domain.tld, stoping (or shutting down) mbox01 will pass all services to mbox02 or mbx03 (waiting for stoping and starting, tea on hand) and viceversa. You can watch the process of passing one node to another with:
-
+Llegado a este punto, Zimbra trabajará en cluster activo-pasivo. Se puede hacer la prueba accediendo desde un navegador a **https://mail.domain.tld**, deteniendo (o apagando) el nodo que esté activo hará que el cluster pase todos los servicios a otro nodo. Se puede observar el proceso (que demora unos 2 minutos) de la siguiente forma:
 ```
 watch pcs status
 ```
 
-(CONTOL + C to exit)
+(CONTOL + C para salir)
 
+# Auto-Provisión de cuentas vía LDAP (Opcional)
 
-# Set LDAP Auto-Provission:
+Si se desea usar un Arbol LDAP externo para la autenticación de cuentas de usuario, se deben seguir los siguientes pasos. En este ejemplo se usa la estructura de un servidor FreeIPA, pero para cualquier otro caso es necesario tener los mismos datos:
 
-This step is required to have all external LDAP accounts available in Zimbra MailBox. In this example we use a FreeIPA server, but any LDAP can do this job, as well you know some important configuration fields:
+- La URL del servicio LDAP, en este ejemplo **ldap://freeipa.domain.tld:389**
+- La base de búsqueda (LDAP Search Base) donde pueden ser encontradas las cuentas, por ejemplo **cn=accounts,dc=domain,dc=tld**
+- El filtro LDAP con el cual se obtiene una cuenta. Es importante que este filtro arroje siempre un solo resultado: **(uid=%u)**
 
-- The URL of the LDAP, in this example **ldap://freeipa.domain.tld:389**
-- The LDAP Search Base where accounts data can be found. In this example **cn=accounts,dc=domain,dc=tld**
-- The filter for finding the account. It is important to ensure the expresion filter to provide only one result. in this example **(uid=%u)**
+Para configurar la auto-provisión se abre la interfaz de administración de Zimbra **https://mail.domain.tld:7071** y se siguen los siguientes pasos:
+- Ir a **Admin > Configuration > Domain** y seleccionar el dominio, en nuestro caso **domain.tld**
+- Ir a **Authentication** en el menú de la izquierda y luego presionar el **ícono en forma de engranaje** en la esquina superior derecha de la ventana y allí seleccionar **Autentication**
+- En la ventana emergente que se abrirá se seleeciona la opción **Use external LDAP** y se da click en **siguiente**
+- Colocar el nombre de hos o la IP del servicio LDAP: **freeipa.domain.tld**
+- Colocar **(uid=%u)** en el campo donde pide el filtro LDAP
+- Colocar **cn=users,cn=accounts,dc=domain,dc=tld** en el campo "Base DN" y seleccionar **siguiente**
+- Probar los valores suministrados usando el botón de pruebas, donde habrá que suministrar un usuario y contraeeñas válidos en el LDAP
+- Presionar **Finnish** en el diálogo de configuración
 
-So, Open **https://mail.domain.tld:7071** to get into Zimbra Admin Interface. then go to **Admin > Configuration > Domain**, click in **domain.tld** in domain list. Go to **Authentication** in the left menu and click on the **gear icon** on the top right corner and select **Autentication**. Now follow the dialogs, giving the following answers:
-
-- **Use external LDAP** (click "next")
-- Put the LDAP (FreeIPA) hostname or IP: **freeipa.domain.tld**
-- Put **(uid=%u)** into Filter Option (remember it works in FreeIPA, modify it to fit your LDAP tree)
-- Put **cn=users,cn=accounts,dc=domain,dc=tld** on Base DN (idem: change domain components to fit yours)
-- **Next**
-- Optionally put DN variables if you have configured it in your LDAP server
-- Test your LDAP connection using a existing user/password account in your LDAP
-- **Finnish** the auth config dialog
-
-Now, open a root shell in Zimbra server and write next commands:
+Ahora desde una consola como root en el nodo activo del cluster se ejecuta la siguiente serie de comandos:
 
 ```
 su - zimbra
@@ -708,20 +705,22 @@ zmprov md prue.ba zimbraAutoProvNotificationBody "Your account has been auto pro
 zmprov md prue.ba zimbraAutoProvNotificationFromAddress prov-admin@prue.ba
 zmprov md prue.ba zimbraAutoProvNotificationSubject "New account auto provisioned"
 ```
-Remember to change "cn=accounts,dc=domain,dc=tld", (uid=%u)" and "ldap://freeipa.domain.tld:389" accornding to your needs, and put exactly the same you give in dialog wizard.
+Como es lógico, hay que adaptar los campos "cn=accounts,dc=domain,dc=tld", (uid=%u)" y "ldap://freeipa.domain.tld:389" siministrados acá como ejemplo para adaptarlo a las variantes del LDAP externo que se esté usando.
 
-You have now configured a Zimbra Server with external LDAP accounts. Cheers.
+Con eso se ha configurado la auto-provisión externa. Ahora se puede abrir el buzón de cualquier usuario válido registrado en el Arbol LDAP externo.
 
-## Configure STONITH (optional)
+## Configuración de Fencing (opcional)
 
-Fencing is used to make a forced node shutdown (like unplug the power cable, or press power button for 5s). This is OPTIONAL, do it only if you need to get rid a node when its status is offline:
+EL "fencing" es usado para aislar un nodo que el cluster determina que no está en condiciones de poder ser integrado y es posible, opcionalmente, configurar un método llamado STONITH para este fin.
 
-Install Fence Agents On Proxmox KVM host, this is needed to be done on the KVM hypervisor Operating System. In a root console in Proxmox host do:
+Sólo realice esta configuración si considera que es necesario desahacerse de la presencia del sistema operativo de un nodo, en caso que no cumpla con el quorum requerido:
+
+En este ejemplo, el Sistema Operativo donde corren las máquinas virtuales es el GNU/Linux de Proxmox, Se instalan en ese equipo los agentes del fencing:
 ```
 apt install fence-agents
 ```
 
-CentOS does not include "pve" fencing agent, so is needed to compile it. Do it in each cluster node:
+CentOS no incluye este agente, por lo cual es necesario descargar sus fuentes y compilarlas (en cada uno de los nodos del cluster):
 
 ```
 cd
@@ -733,24 +732,19 @@ make && make install
 fence_pve --version
 ```
 
-To test it, ask fence_pve from each cluster node:
+Para probar el funcionamiento del agente, desde los nodos del cluster se ejecuta el siguiente comando:
 ```
 /usr/sbin/fence_pve --ip=<proxmox_ip> --username=root@pam --password=<proxmox_passwd> --plug=<vm_id> --action=status
 ```
 
-Change <proxmox_ip> for the KVM Hypervisor address (192.168.0.10 in the example), leave "root@pam" without changes, put root Proxmox host password in <proxmox_passowrd> and set in <vm_id> the unique VM ID, for example:
+En este ejemplo, hay que cambiar <proxmox_ip> por la dirección IP del Hypervisor KVM, "root@pam" es necesario dejarlo sin modificaciones, en <proxmox_passowrd> se coloca la contraseña de root de Hypervisor y en <vm_id> el número de identificación de la máquina virtual, por ejemplo:
 ```
-/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="ThisIsMyPasswd" --plug=101 --action=status
+/usr/sbin/fence_pve --ip=192.168.0.10 --username=root@pam --password="EstaEsMiClave" --plug=101 --action=status
 ```
 
-You will get a "STATUS: OK" message if everything is ok.
+Se obtendrá un mensaje "STATUS: OK" si todo funciona correctamente.
 
-
-
-When a node fails (loose connection, hangs, crash, etc) pacemaker needs to fence it. In the following example is created a stonith rule for each node, calling Proxmox KVM system to make actions over any failing virtual machine:
-
-
-On any active node make the stonith rules:
+Cuando un nodo falla (se cuelga, pierde conexión, etc) pacemaker procederá a aislarlo (fencing). En el siguiente ejemplo están las reglas para activar STONITH en ese caso. En cualquier nodo activo se ejecuta:
 
 ```
 pcs stonith create fence_mboxs01 fence_pve ipaddr=<proxmox_ip> inet4_only="true" vmtype="qemu" \
@@ -766,15 +760,7 @@ pcs stonith create fence_mbox03 fence_pve ipaddr=<proxmox_ip> inet4_only="true" 
   pcmk_host_list="mbox03.domain.tld" node_name="pve"
 ```
 
-Next, set the stonith resource to be (when possible) active in its own node. This is optional, but allows a node to call its hypervisor to shut it down, there are environments (a proxmox cluster where VM can be running in different hosts) where this si the most secure configuration to ensure sucessful stonith:
-```
-pcs constraint location fence_mbox01 prefers mbox01.domain.tld
-pcs constraint location fence_mbox02 prefers mbox02.domain.tld
-pcs constraint location fence_mbox03 prefers mbox03.domain.tld
-```
-
-For a node to be online it must see at least one more node, it is, needs a quorum > 1. Enable stonith in cluster, set a shut down action when quorum is not satisfied:
-
+Para que un nodo permanezca en línea, debe ver al menos un nodo mas. Con el siguiente comando se activa esa directiva:
 ```
 pcs stonith update fence_mbox01 action="off" --force
 pcs stonith update fence_mbox02 action="off" --force
@@ -783,36 +769,33 @@ pcs property set stonith-enabled=true
 pcs property set no-quorum-policy=suicide
 ```
 
-Resources and stonith actions are now completely configured. Restart all cluster services in all nodes (execute the following in each one):
+Finalmente, se reinicia los servicios de cluster para que la configuración tome efecto:
 ```
 systemctl enable pcsd
 systemctl enable corosync
 systemctl enable pacemaker
 ```
 
-Now, test the cluster fencing, disconecting one node, turning off the network interface:
-
+Ahora se puede probar el fencing, suspendiendo la configuración de red en una máquina virtual (lo cual desconectará el nodo y perderá el quorum):
 ```
 systemctl stop networking
 ```
 
-Check the cluster status, when this node loose comunication with the cluster, the fencing agent will send a signal to VM hypervisor and a STOINITH will be done over this absent node. You can watch the process seeing happening changes:
+Se puede verificar así:
 
 ```
 watch pcs status
 ```
-(CONTROL-C to exit)
+(CONTROL-C para salir)
 
 
-## Install Zimbra Proxy Servers
+## Instalación de Servidores Zimbra-Proxy (opcional)
 
-First, set FQDN hostname for each node, i.e:
-
+Primero, hay que configurar el nombre de la máquina para que sea un FQDN:
 ```
 hostnamectl set-hostname "proxy01.domain.tld" && exec bash 
 ```
-
-Next, verify the propper hostname and ip in /etc/hosts as well as others nodes:
+Luego, verificar que exista el proxy en **/etc/hosts** al igual que los demás nodos:
 
 ```
 192.168.0.1    mbox01.domain.tld     mbox01
@@ -826,31 +809,28 @@ Next, verify the propper hostname and ip in /etc/hosts as well as others nodes:
 192.168.0.10   proxmox.domain.tld    proxmox
 ```
 
-If you are using FreeIPA as LDAP external service, it is necessary to install the IPA agent and enroll the system:
-
+Seguidamente hay que añadir el proxy en el DNS. Si se está usando FreeIPA:
 ```
 ipa-client-install --enable-dns-updates
 ```
 
-Otherwise, insert the propper DNS record to solve "proxy01.domain.tld"
-
-
-Disable SELinux Policies in all systems:
-
-First, disable SELinux in the current running system:
-
+Desactivar la política SELinux:
 ```
 setenforce 0
 ```
 
-Then, disable it in the next boot, changing the following line in /etc/selinux/config
+Para que SELinux se desactive permanentemente, cambiar la siguiente línea en **/etc/selinux/config**:
 ```
 SELINUX=permissive
 ```
 
-Now run the installer (with -s option) and ONLY select zimbra-proxy option:
+Luego, correr el instalador de Zimbra con la opción "**-s**"
 
 ```
+mkdir /root/zimbra && cd /root/zimbra
+wget https://files.zimbra.com/downloads/8.8.15_GA/zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+tar zxpf zcs-8.8.15_GA_3869.RHEL7_64.20190918004220.tgz
+cd zcs-8.8.15_GA_3869.RHEL7_64.20190918004220
 ./install.sh -s
 
 Do you agree with the terms of the software license agreement? [N] Y
@@ -864,14 +844,12 @@ Install zimbra-store [Y] N
 Install zimbra-apache [Y] N
 Install zimbra-spell [Y] N
 Install zimbra-memcached [Y] N
-Install zimbra-proxy [Y] Y <----------------- "y" option only on this
+Install zimbra-proxy [Y] Y <----------------- "y" sólo responder Y en esta opción
 
 The system will be modified.  Continue? [N] Y
 ```
 
-In many recipes and howtos zimbra-memcached is installed with zimbra-proxy, but the truth is there is only one ziimbra-memcached needed for zimbra services to work and in all tests, only zimbra-proxy package selected gives the expected behavior. Besides the installer will download and install zimbra-memcached, only the mailboxes servers will attend tho this services requests.
-
-Wait for the install process (lemonade maybe?) and when it finnishes run:
+En muchas recetas en internet, "zimbra-memcached" es instalada junto a "zimbra-proxy", pero la verdad es que sólo una instancia de "zimbra-memcached" es necesaria y en el servicio principal ya se ha instalado uno.
 
 ```
 mkdir -p /opt/zimbra/java/jre/lib/security/
@@ -880,24 +858,23 @@ chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-You will need to know the "LDAP Nginx Password" for continue. Go to mailbox server (zimbra01 or zimbra02, the one is alive and as master node in cluster) and run:
-
+Es necesario conocer la clave de acceso para Nginx. Esta clave fue generada automáticamente en el proceso de instalación de los nodos, así que será necesario conocerla. Desde el nodo activo del cluster se ejecuta:
 ```
 su - zimbra
 zmlocalconfig -s ldap_nginx_password
 ```
 
-Now in proxy installer menu, go to Option 1 "Common Configuration" and choose the option 2 "**Ldap master host**". Put here the virtual IP hostname: "**mail.domain.tld**"
+Ahora, en el instalador del proxy, se accede a la opción 1 "**Common Configuration**" y allí se va a la opción 2 "**Ldap master host**". Allí se coloca el nombre de host asignado a la IP Virtual: "**mail.domain.tld**"
 
-Then choose option 4 "Ldap Admin password" and put the one you get from mailboxes servers. When set, it will automaticly connect and retrieve all zimbra services configuration via LDAP:
+Posteriormente, se accede a la opción 4 "**Ldap Admin password**" y se proporciona la clave obtenida el el proceso anterior. Hecho esto el instalador se conectará y tomará del servicio LDAP principal todas las configuraciones necesarias:
 
 ```
 Setting defaults from ldap...done.
 ```
 
-Now, go to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message, and go to option 2 "zimbra-proxy", then option 12 "Bind password for nginx ldap user" and put the same you get from "zmlocalconfig -s ldap_nginx_password" in mailbox server.
+Para regresar al menú principal se presiona ENTER ante el mensaje **"Select, or 'r' for previous menu [r]"** y allí se selecciona la opción 2 **"zimbra-proxy"** en la cual se provee la contraseña de nginx a través de la opción 12 **"Bind password for nginx ldap user"**. Se coloca la misma obtenida en el paso anterior.
 
-Once this password is set, return to main menu and finnish the configuration:
+Una vez que se ha realizado este paso, se regresa al menú principal y se procede a realizar la instalación:
 
 ```
 *** CONFIGURATION COMPLETE - press 'a' to apply
@@ -912,7 +889,7 @@ Notify Zimbra of your installation? [Yes]
 Configuration complete - press return to exit 
 ```
 
-To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (zimbra01 or zimbra02, the one serving as master) and in proxy01 server do:
+Para finalizar, es necesario actualizar las llaves SSH entre los servidores. En el nodo activo y en el nuevo proxy instalado se ejecutan los siguientes comandos:
 
 ```
 su - zimbra
@@ -921,29 +898,29 @@ su - zimbra
 exit;
 ```
 
-Then, when done, in both servers do also:
+### Configuración de RSYSLOG
+
+Para obtener las estadísticas y estado de funcionamiento de los servicios, es necesario realizar la configuración de RSYSLOG. 
+
+En cada uno de los proxies se ejecuta:
 ```
 /opt/zimbra/libexec/zmsyslogsetup
 ```
 
-Now go to /etc/rsyslog.conf in all hosts (mailboxes and proxies) and comment out all lines with "@mail.domain.tld" and remove/comment the ones to point lo local files, so it has to be like this (in all servers!):
+## Reparación de chat-zimlet:
+
+El componente de Zimbra encargado del servicio de mensajería instantánea (chat) presenta fallas al terminar de ser instalado y no funciona correctamente. El error consiste en una librería Java mal empaquetada. El problema se resuelve sustituyando el paquete defectuoso de la siguiente manera:
 
 ```
-local0.*                @mail.prue.ba
-local1.*                @mail.prue.ba
-auth.*                  @mail.prue.ba
-mail.*                  @mail.prue.ba
-# local0.*                -/var/log/zimbra.log
-# local1.*                -/var/log/zimbra-stats.log
-# auth.*                  -/var/log/zimbra.log
+mv /opt/zimbra/lib/ext/openchat/zal.jar /tmp
+cp -rp /opt/zimbra/lib/ext/zimbradrive/zal.jar /opt/zimbra/lib/ext/openchat/zal.jar
+su - zimbra
+zmmailboxdctl restart
 ```
 
-This is a bug fix: all logs comes in a loop when the server sends their messages "remotely to himself". If you skip this step, you will go empty of space in local disk as soon as the filesystem speed allows it.
+## Documentación consultada para realizar el presente trabajo:
 
-
-
-## Links (consulted documentation):
-
+- Zimbra Cluster: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
 - https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
 - https://access.redhat.com/solutions/293183
 - https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
@@ -957,37 +934,5 @@ This is a bug fix: all logs comes in a loop when the server sends their messages
 - https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
 - https://www.epilis.gr/en/blog/2018/07/02/fencing-linux-vm-cluster/
 - https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
-
-## NOTES
-
-The following command shows the quorum configuration.
-```
-pcs quorum
-pcs quorum [config]
-pcs quorum expected-votes 2
-```
-
-The following command shows the quorum runtime status:
-```
-pcs quorum status
-```
-
-Quorum information:
-```
-corosync-quorumtool 
-```
-
-How to change buggy chat zimlet:
-
-```
-zmzimletctl disable com_zextras_chat_open
-zmzimletctl undeploy com_zextras_chat_open
-zmprov fc all
-zmmailboxdctl restart
-# yum install zimbra-chat
-zmprov fc all
-zmmailboxdctl restart
-```
-
 
 
