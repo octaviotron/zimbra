@@ -907,6 +907,17 @@ En cada uno de los proxies se ejecuta:
 /opt/zimbra/libexec/zmsyslogsetup
 ```
 
+## Reparación de chat-zimlet:
+
+El componente de Zimbra encargado del servicio de mensajería instantánea (chat) presenta fallas al terminar de ser instalado y no funciona correctamente. El error consiste en una librería Java mal empaquetada. El problema se resuelve sustituyando el paquete defectuoso de la siguiente manera:
+
+```
+mv /opt/zimbra/lib/ext/openchat/zal.jar /tmp
+cp -rp /opt/zimbra/lib/ext/zimbradrive/zal.jar /opt/zimbra/lib/ext/openchat/zal.jar
+su - zimbra
+zmmailboxdctl restart
+```
+
 ## Documentación consultada para realizar el presente trabajo:
 
 - Zimbra Cluster: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
@@ -923,43 +934,5 @@ En cada uno de los proxies se ejecuta:
 - https://www.lisenet.com/2018/libvirt-fencing-on-a-physical-kvm-host/
 - https://www.epilis.gr/en/blog/2018/07/02/fencing-linux-vm-cluster/
 - https://clusterlabs.org/pacemaker/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/_configure_the_cluster_for_stonith.html
-
-## NOTES
-
-The following command shows the quorum configuration.
-```
-pcs quorum
-pcs quorum [config]
-pcs quorum expected-votes 2
-```
-
-The following command shows the quorum runtime status:
-```
-pcs quorum status
-```
-
-Quorum information:
-```
-corosync-quorumtool 
-```
-
-### How to change buggy chat zimlet:
-
-```
-zmzimletctl disable com_zextras_chat_open
-zmzimletctl undeploy com_zextras_chat_open
-zmprov fc all
-zmmailboxdctl restart
-# yum install zimbra-chat
-zmprov fc all
-zmmailboxdctl restart
-```
-New solution:
-```
-mv /opt/zimbra/lib/ext/openchat/zal.jar /tmp
-cp -rp /opt/zimbra/lib/ext/zimbradrive/zal.jar /opt/zimbra/lib/ext/openchat/zal.jar
-su - zimbra
-zmmailboxdctl restart
-```
 
 
