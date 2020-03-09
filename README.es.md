@@ -858,7 +858,7 @@ chown -R  zimbra.zimbra /opt/zimbra/java
 /opt/zimbra/libexec/zmsetup.pl
 ```
 
-Es necesario conocer la clave de acceso para Nginx. Esta clave fue generada automáticamente en el proceso de instalación de los nodos, así que será necesario conocerla. Desde uno de los nodos del cluster se ejecuta:
+Es necesario conocer la clave de acceso para Nginx. Esta clave fue generada automáticamente en el proceso de instalación de los nodos, así que será necesario conocerla. Desde el nodo activo del cluster se ejecuta:
 ```
 su - zimbra
 zmlocalconfig -s ldap_nginx_password
@@ -872,9 +872,9 @@ Posteriormente, se accede a la opción 4 "**Ldap Admin password**" y se proporci
 Setting defaults from ldap...done.
 ```
 
-Now, go to main menu pressing ENTER in "Select, or 'r' for previous menu [r]" prompt message, and go to option 2 "zimbra-proxy", then option 12 "Bind password for nginx ldap user" and put the same you get from "zmlocalconfig -s ldap_nginx_password" in mailbox server.
+Para regresar al menú principal se presiona ENTER ante el mensaje **"Select, or 'r' for previous menu [r]"** y allí se selecciona la opción 2 **"zimbra-proxy"** en la cual se provee la contraseña de nginx a través de la opción 12 **"Bind password for nginx ldap user"**. Se coloca la misma obtenida en el paso anterior.
 
-Once this password is set, return to main menu and finnish the configuration:
+Una vez que se ha realizado este paso, se regresa al menú principal y se procede a realizar la instalación:
 
 ```
 *** CONFIGURATION COMPLETE - press 'a' to apply
@@ -889,7 +889,7 @@ Notify Zimbra of your installation? [Yes]
 Configuration complete - press return to exit 
 ```
 
-To make all this completed, it is needed to update SSH keys between servers, so in mailbox server (mbox01 or mbox02, the one serving as master) and in proxy01 server do:
+Para finalizar, es necesario actualizar las llaves SSH entre los servidores. En el nodo activo y en el nuevo proxy instalado se ejecutan los siguientes comandos:
 
 ```
 su - zimbra
@@ -898,28 +898,16 @@ su - zimbra
 exit;
 ```
 
-Then, when done, in both servers do also:
+### Configuración de RSYSLOG
+
+Para obtener las estadísticas y estado de funcionamiento de los servicios, es necesario realizar la configuración de RSYSLOG. 
+
+En cada uno de los proxies se ejecuta:
 ```
 /opt/zimbra/libexec/zmsyslogsetup
 ```
 
-Now go to /etc/rsyslog.conf in all hosts (mailboxes and proxies) and comment out all lines with "@mail.domain.tld" and remove/comment the ones to point lo local files, so it has to be like this (in all servers!):
-
-```
-local0.*                @mail.prue.ba
-local1.*                @mail.prue.ba
-auth.*                  @mail.prue.ba
-mail.*                  @mail.prue.ba
-# local0.*                -/var/log/zimbra.log
-# local1.*                -/var/log/zimbra-stats.log
-# auth.*                  -/var/log/zimbra.log
-```
-
-This is a bug fix: all logs comes in a loop when the server sends their messages "remotely to himself". If you skip this step, you will go empty of space in local disk as soon as the filesystem speed allows it.
-
-
-
-## Links (consulted documentation):
+## Documentación consultada para realizar el presente trabajo:
 
 - Zimbra Cluster: https://github.com/tigerlinux/tigerlinux-extra-recipes/tree/master/recipes/ispapps/zimbra-cluster-centos7
 - https://www.alteeve.com/w/Fencing_KVM_Virtual_Servers
